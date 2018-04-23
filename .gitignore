@@ -2,3 +2,4 @@
 .idea/
 notebooks/*
 !/notebooks/spacecraft.ipynb
+!/notebooks/minimalspace.ipynb
