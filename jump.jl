@@ -43,12 +43,24 @@ function local_model(solver)
         exp_d
     end
 
-    # # CHECK SOLN
-    # @constraints m begin
-    #     d == 0.6723
-    #     e == 0.3277
-    #     g == 0.1723
-    # end
+    # Nonconvex constraints
+    @NLconstraints m begin
+        # Orbit
+        exp(d) == exp_d
+        exp(e) >= 1 - exp_d
+        exp(g) >= exp_d - 1/2
+    end
+
+    # Convex constraints
+    @NLconstraints m begin
+        # Power and communications
+        exp(P_T - P_t) + exp(P_l - P_t) <= 1
+        # Orbit
+        exp(R - a) + exp(h - a) <= 1
+        exp(2*h - 2*r) + exp(log(2) + R + h - 2*r) <= 1
+        # Mass budgets
+        exp(m_b - m_t) + exp(m_p - m_t) + exp(m_A - m_t) + exp(m_T - m_t) + exp(m_P - m_t) + exp(m_S - m_t) + exp(m_c - m_t) <= 1
+    end
 
     # Linear constraints
     @constraints m begin
@@ -68,25 +80,6 @@ function local_model(solver)
         m_T == ρ_T + 3/2*D_T
         m_P == ρ_P - h
         m_S == η_S + m_t
-    end
-
-    # Convex constraints
-    @NLconstraints m begin
-        # Power and communications
-        exp(P_T - P_t) + exp(P_l - P_t) <= 1
-        # Orbit
-        exp(R - a) + exp(h - a) <= 1
-        exp(2*h - 2*r) + exp(log(2) + R + h - 2*r) <= 1
-        # Mass budgets
-        exp(m_b - m_t) + exp(m_p - m_t) + exp(m_A - m_t) + exp(m_T - m_t) + exp(m_P - m_t) + exp(m_S - m_t) + exp(m_c - m_t) <= 1
-    end
-
-    # Nonconvex constraints
-    @NLconstraints m begin
-        # Orbit
-        exp(d) == exp_d
-        exp(e) >= 1 - exp_d
-        exp(g) >= exp_d - 1/2
     end
 
     # Minimize total mass
@@ -182,6 +175,24 @@ function global_model(solver, n_pts::Int)
     pwgraph_exp_e = piecewiselinear(m, e, brk_pts(e_min, e_max, n_pts), exp)
     pwgraph_exp_g = piecewiselinear(m, g, brk_pts(g_min, g_max, n_pts), exp)
 
+    # Convex extended formulation constraints
+    @NLconstraints m begin
+        exp(P_T - P_t) <= exp_pTt
+        exp(P_l - P_t) <= exp_Plt
+        exp(R - a) <= exp_Ra
+        exp(h - a) <= exp_ha
+        exp(2*h - 2*r) <= exp_hr
+        exp(log(2) + R + h - 2*r) <= exp_Rhr
+        exp(m_b - m_t) <= exp_mbt
+        exp(m_p - m_t) <= exp_mpt
+        exp(m_A - m_t) <= exp_mAt
+        exp(m_T - m_t) <= exp_mTt
+        exp(m_P - m_t) <= exp_mPt
+        exp(m_S - m_t) <= exp_mSt
+        exp(m_c - m_t) <= exp_mct
+        exp(d) <= exp_d
+    end
+
     # Linear constraints
     @constraints m begin
         # Power and communications
@@ -209,24 +220,6 @@ function global_model(solver, n_pts::Int)
         exp_d <= pwgraph_exp_d
         pwgraph_exp_e + exp_d >= 1
         exp_d <= pwgraph_exp_g + 1/2
-    end
-
-    # Convex extended formulation constraints
-    @NLconstraints m begin
-        exp(P_T - P_t) <= exp_pTt
-        exp(P_l - P_t) <= exp_Plt
-        exp(R - a) <= exp_Ra
-        exp(h - a) <= exp_ha
-        exp(2*h - 2*r) <= exp_hr
-        exp(log(2) + R + h - 2*r) <= exp_Rhr
-        exp(m_b - m_t) <= exp_mbt
-        exp(m_p - m_t) <= exp_mpt
-        exp(m_A - m_t) <= exp_mAt
-        exp(m_T - m_t) <= exp_mTt
-        exp(m_P - m_t) <= exp_mPt
-        exp(m_S - m_t) <= exp_mSt
-        exp(m_c - m_t) <= exp_mct
-        exp(d) <= exp_d
     end
 
     # Minimize total mass
