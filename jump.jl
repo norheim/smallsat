@@ -31,24 +31,21 @@ function local_model(solver)
         E_b # battery energy
 
         # Orbit related parameters
-        h # altitude
+        h_min <= h <= h_max, (start=log(1.0386e6)) # altitude
         a # semi-major axis
         T # orbit period
         r # worst case communications distance
-        d_min <= d <= d_max, (start=0.6723) # daylight fraction of orbit
-        e_min <= e <= e_max, (start=0.3277) # eclipse fraction of orbit
-        g_min <= g <= g_max, (start=0.1723) # ground station viewing fraction of orbit
-
-        # Auxiliary variables
-        exp_d
+        d_min <= d <= d_max, (start=log(0.6723)) # daylight fraction of orbit
+        e_min <= e <= e_max, (start=log(0.3277)) # eclipse fraction of orbit
+        g_min <= g <= g_max, (start=log(0.1723)) # ground station viewing fraction of orbit
     end
 
     # Nonconvex constraints
     @NLconstraints m begin
         # Orbit
-        exp(d) == exp_d
-        exp(e) >= 1 - exp_d
-        exp(g) >= exp_d - 1/2
+        exp(e) >= 1 - exp(d)
+        exp(g) >= exp(d) - 1/2
+        log(π) + g == log(acos(1/(exp(h - R) + 1))) # instead of linearized
     end
 
     # Convex constraints
@@ -71,7 +68,7 @@ function local_model(solver)
         # Payload performance
         X_r == h + λ_v - D_p
         # Orbit
-        g == α_1 + γ_1*(h - R)
+        # g == α_1 + γ_1*(h - R) # linearized
         T == log(2π) + (3*a - μ)/2
         # Mass budgets
         m_b == ρ_b + E_b
@@ -144,7 +141,7 @@ function global_model(solver, n_pts::Int)
         E_b # battery energy
 
         # Orbit related parameters
-        h # altitude
+        h_min <= h <= h_max # altitude
         a # semi-major axis
         T # orbit period
         r # worst case communications distance
@@ -170,16 +167,18 @@ function global_model(solver, n_pts::Int)
     end
 
     # Nonconvex extended formulation piecewiselinear approx
-    brk_pts = (v_min, v_max, num_pts) -> log.(linspace(exp(v_min), exp(v_max), num_pts))
-    pwgraph_exp_d = piecewiselinear(m, d, brk_pts(d_min, d_max, n_pts), exp)
-    pwgraph_exp_e = piecewiselinear(m, e, brk_pts(e_min, e_max, n_pts), exp)
-    pwgraph_exp_g = piecewiselinear(m, g, brk_pts(g_min, g_max, n_pts), exp)
+    brk_log = (v_min, v_max, num_pts) -> log.(linspace(exp(v_min), exp(v_max), num_pts))
+    pwgraph_exp_d = piecewiselinear(m, d, brk_log(d_min, d_max, n_pts), exp) # convex
+    pwgraph_exp_e = piecewiselinear(m, e, brk_log(e_min, e_max, n_pts), exp) # convex
+    pwgraph_exp_g = piecewiselinear(m, g, brk_log(g_min, g_max, n_pts), exp) # convex
+    fhR = h_val -> log(acos(1/(exp(h_val - R) + 1))) # instead of linearized
+    pwgraph_fhR = piecewiselinear(m, h, brk_log(h_min, h_max, n_pts), fhR) # concave
 
     # Convex extended formulation constraints
     @NLconstraints m begin
         exp(P_T - P_t) <= exp_pTt
         exp(P_l - P_t) <= exp_Plt
-        exp(R - a) <= exp_Ra
+        exp(R - a) <= exp_Ra 
         exp(h - a) <= exp_ha
         exp(2*h - 2*r) <= exp_hr
         exp(log(2) + R + h - 2*r) <= exp_Rhr
@@ -191,6 +190,7 @@ function global_model(solver, n_pts::Int)
         exp(m_S - m_t) <= exp_mSt
         exp(m_c - m_t) <= exp_mct
         exp(d) <= exp_d
+        log(π) + g <= log(acos(1/(exp(h - R) + 1))) # instead of linearized
     end
 
     # Linear constraints
@@ -202,7 +202,7 @@ function global_model(solver, n_pts::Int)
         # Payload performance
         X_r == h + λ_v - D_p
         # Orbit
-        g == α_1 + γ_1*(h - R)
+        # g == α_1 + γ_1*(h - R) # linearized
         T == log(2π) + (3*a - μ)/2
         # Mass budgets
         m_b == ρ_b + E_b
@@ -220,6 +220,7 @@ function global_model(solver, n_pts::Int)
         exp_d <= pwgraph_exp_d
         pwgraph_exp_e + exp_d >= 1
         exp_d <= pwgraph_exp_g + 1/2
+        log(π) + g >= pwgraph_fhR
     end
 
     # Minimize total mass
@@ -264,10 +265,10 @@ using Ipopt
 using CPLEX
 using Pajarito
 
-local_solver = IpoptSolver(print_level=1)
+local_solver = IpoptSolver(print_level=5)
 global_solver = PajaritoSolver(
     mip_solver=CplexSolver(CPX_PARAM_SCRIND=1, CPX_PARAM_EPINT=1e-9, CPX_PARAM_EPRHS=1e-9, CPX_PARAM_EPGAP=1e-7),
-    cont_solver=IpoptSolver(print_level=0),
+    cont_solver=IpoptSolver(print_level=2),
     mip_solver_drives=true,
     log_level=1,
     rel_gap=1e-7)
@@ -276,4 +277,4 @@ global_solver = PajaritoSolver(
 # Run
 local_model(local_solver)
 
-global_model(global_solver, 120)
+global_model(global_solver, 60)

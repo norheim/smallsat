@@ -29,12 +29,18 @@ m_c = log(0.2) # kg required weight
 λ_c = c - f
 G_r = η + 2*(log(π) + D_r - λ_c)
 
+h_min = log(1e5) # orbit altitude
+h_max = log(2e6)
+
 d_min = log(0.1) # daylight fraction of orbit
 d_max = log(0.9)
 
 e_min = log(0.1) # eclipse fraction of orbit
 e_max = log(0.9)
 
-g_min = log(0.1) # ground station viewing fraction of orbit
-g_max = log(0.9)
+exp_RhR_min = 1/(exp(h_min - R) + 1)
+exp_RhR_max = 1/(exp(h_max - R) + 1)
+
+g_min = log(acos(exp_RhR_min)/pi) # ground station viewing fraction of orbit
+g_max = log(acos(exp_RhR_max)/pi)
 ;
