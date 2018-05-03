@@ -46,6 +46,10 @@ function global_model(solver, n_pts::Int)
         g_min <= g <= g_max # ground station viewing fraction of orbit
         
         h_ρi[1] <= h_ρ <= h_ρi[end]
+
+        # Lifetime 
+        Ln 
+        Lp 
         
         # Auxiliary variables
         exp_pTt
@@ -62,6 +66,8 @@ function global_model(solver, n_pts::Int)
         exp_mSt
         exp_mct
         exp_d
+        exp_Ln
+        exp_Lp
         
         # Component related variables
         x_T[1:n_T], Bin
@@ -120,6 +126,8 @@ function global_model(solver, n_pts::Int)
         exp(m_c - m_t) <= exp_mct
         exp(d) <= exp_d
         log(π) + g <= log(acos(1/(exp(h - R) + 1))) # instead of linearized
+        exp(Ln - Lt) <= exp_Ln
+        exp(Lp - Lt) <= exp_Lp
     end
 
     # Linear constraints
@@ -138,8 +146,11 @@ function global_model(solver, n_pts::Int)
         #m_p == ρ_p + 3/2*D_p
         m_A == ρ_A + A
         #m_T == ρ_T + 3/2*D_T
-        m_P == ρ_P - h
+        #m_P == ρ_P - h
         m_S == η_S + m_t
+        Ln == H + m + T - log(2π) - C_D - A - 2*h - ρ
+        Lp == m_P + I_sp + g + a - log(0.5) - C_D - A - ρ - μ
+        exp_Ln + exp_Lp <= 1
         # From convex constraints
         exp_pTt + exp_Plt <= 1
         exp_Ra + exp_ha <= 1
