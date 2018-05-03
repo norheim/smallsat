@@ -56,31 +56,10 @@ function global_model(solver, n_pts::Int)
         exp_d
         
         # Component related variables
-        x_T[1:n_T], Bin
-        x_b[1:n_b], Bin
-        x_p[1:n_p], Bin
-        x_A[1:n_A], Bin
-    end
-    
-    # Catalog selections
-    @constraints m begin
-        sum(x_T) == 1 # transmitter catalog
-        D_T == dot(x_T, D_Ti)
-        m_T == dot(x_T, m_Ti)
-        P_T == dot(x_T, P_Ti)
-        G_T == dot(x_T, G_Ti)
-
-        sum(x_b) == 1 # battery catalog
-        E_b == dot(x_b, E_bi)
-        m_b == dot(x_b, m_bi)
-        
-        sum(x_p) == 1 # payload catalog
-        D_p == dot(x_p, D_pi)
-        m_p == dot(x_p, m_pi)
-
-        sum(x_A) == 1 # solar panel catalog
-        ρ_A == dot(x_A, ρ_Ai)
-        η_A == dot(x_A, η_Ai)
+        x_T[1:2], Bin
+        x_b[1:5], Bin
+        x_p[1:2], Bin
+        x_A[1:2], Bin
     end
 
     # Nonconvex extended formulation piecewiselinear approx

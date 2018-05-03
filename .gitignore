@@ -4,4 +4,4 @@ notebooks/*
 !/notebooks/spacecraft.ipynb
 !/notebooks/minimalspace.ipynb
 !/notebooks/JuliaSat.ipynb
-.ipynb_checkpoints/*
+.ipynb*
