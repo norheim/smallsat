@@ -146,7 +146,7 @@ function global_model(solver, n_pts::Int)
         T # orbit period
         r # worst case communications distance
         d_min <= d <= d_max # daylight fraction of orbit
-        e_min <= e <= e_max # eclipse fraction of orbit
+        #e_min <= e <= e_max # eclipse fraction of orbit
         g_min <= g <= g_max # ground station viewing fraction of orbit
 
         # Auxiliary variables
@@ -169,7 +169,7 @@ function global_model(solver, n_pts::Int)
     # Nonconvex extended formulation piecewiselinear approx
     brk_log = (v_min, v_max, num_pts) -> log.(linspace(exp(v_min), exp(v_max), num_pts))
     pwgraph_exp_d = piecewiselinear(m, d, brk_log(d_min, d_max, n_pts), exp) # convex
-    pwgraph_exp_e = piecewiselinear(m, e, brk_log(e_min, e_max, n_pts), exp) # convex
+    #pwgraph_exp_e = piecewiselinear(m, e, brk_log(e_min, e_max, n_pts), exp) # convex
     pwgraph_exp_g = piecewiselinear(m, g, brk_log(g_min, g_max, n_pts), exp) # convex
     fhR = h_val -> log(acos(1/(exp(h_val - R) + 1))) # instead of linearized
     pwgraph_fhR = piecewiselinear(m, h, brk_log(h_min, h_max, n_pts), fhR) # concave
@@ -193,11 +193,12 @@ function global_model(solver, n_pts::Int)
         log(π) + g <= log(acos(1/(exp(h - R) + 1))) # instead of linearized
     end
 
+    
     # Linear constraints
     @constraints m begin
         # Power and communications
         P_t - d == A + η_A + Q
-        E_b >= P_t - d + e + T
+        E_b >= P_t - d + T
         EN + L + k + T_s + R + log(2π) + N + B + log(4) + 2*r == P_T + G_r + X_r + g + T + η + 2*D_T
         # Payload performance
         X_r == h + λ_v - D_p
@@ -218,7 +219,7 @@ function global_model(solver, n_pts::Int)
         exp_mbt + exp_mpt + exp_mAt + exp_mTt + exp_mPt + exp_mSt + exp_mct <= 1
         # From nonconvex constraints
         exp_d <= pwgraph_exp_d
-        pwgraph_exp_e + exp_d >= 1
+        #pwgraph_exp_e + exp_d >= 1
         exp_d <= pwgraph_exp_g + 1/2
         log(π) + g >= pwgraph_fhR
     end
@@ -232,7 +233,7 @@ function global_model(solver, n_pts::Int)
     println("  status: ", status)
     println("  total mass: ", exp(getobjectivevalue(m)))
     println("  d = ", exp(getvalue(d)))
-    println("  e = ", exp(getvalue(e)))
+    #println("  e = ", exp(getvalue(e)))
     println("  g = ", exp(getvalue(g)))
     println()
 
