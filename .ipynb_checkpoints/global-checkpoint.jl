@@ -14,7 +14,9 @@ function global_model(solver, n_pts::Int)
         # Subsystem specific parameters
         D_p # payload optical aperture diameter
         D_T # transmitter antenna diameter
-        A # solar panel surface area
+        A # solar panel surface area     
+        ρ_A
+        η_A
 
         # Mass related parameters
         m_t # total mass
@@ -56,10 +58,31 @@ function global_model(solver, n_pts::Int)
         exp_d
         
         # Component related variables
-        x_T[1:2], Bin
-        x_b[1:5], Bin
-        x_p[1:2], Bin
-        x_A[1:2], Bin
+        x_T[1:n_T], Bin
+        x_b[1:n_b], Bin
+        x_p[1:n_p], Bin
+        x_A[1:n_A], Bin
+    end
+    
+    # Catalog selections
+    @constraints m begin
+        sum(x_T) == 1 # transmitter catalog
+        D_T == dot(x_T, D_Ti)
+        m_T == dot(x_T, m_Ti)
+        P_T == dot(x_T, P_Ti)
+        #G_T == dot(x_T, G_Ti)
+
+        sum(x_b) == 1 # battery catalog
+        E_b == dot(x_b, E_bi)
+        m_b == dot(x_b, m_bi)
+        
+        sum(x_p) == 1 # payload catalog
+        D_p == dot(x_p, D_pi)
+        m_p == dot(x_p, m_pi)
+
+        sum(x_A) == 1 # solar panel catalog
+        ρ_A == dot(x_A, ρ_Ai)
+        η_A == dot(x_A, η_Ai)
     end
 
     # Nonconvex extended formulation piecewiselinear approx
@@ -89,7 +112,6 @@ function global_model(solver, n_pts::Int)
         log(π) + g <= log(acos(1/(exp(h - R) + 1))) # instead of linearized
     end
 
-    
     # Linear constraints
     @constraints m begin
         # Power and communications
@@ -102,10 +124,10 @@ function global_model(solver, n_pts::Int)
         # g == α_1 + γ_1*(h - R) # linearized
         T == log(2π) + (3*a - μ)/2
         # Mass budgets
-        m_b == ρ_b + E_b
-        m_p == ρ_p + 3/2*D_p
+        #m_b == ρ_b + E_b
+        #m_p == ρ_p + 3/2*D_p
         m_A == ρ_A + A
-        m_T == ρ_T + 3/2*D_T
+        #m_T == ρ_T + 3/2*D_T
         m_P == ρ_P - h
         m_S == η_S + m_t
         # From convex constraints
@@ -125,12 +147,18 @@ function global_model(solver, n_pts::Int)
 
     # Solve
     status = solve(m)
-    println("\nglobal:")
+    println()
     println("  status: ", status)
     println("  total mass: ", exp(getobjectivevalue(m)))
+    println()
     println("  d = ", exp(getvalue(d)))
     #println("  e = ", exp(getvalue(e)))
     println("  g = ", exp(getvalue(g)))
+    println()
+    println("  transmitter: ", find(i -> (i > 0.5), getvalue(x_T)))
+    println("  battery: ", find(i -> (i > 0.5), getvalue(x_b)))
+    println("  payload: ", find(i -> (i > 0.5), getvalue(x_p)))
+    println("  solar panel: ", find(i -> (i > 0.5), getvalue(x_A)))
     println()
 
     # @show exp(getvalue(D_p))
