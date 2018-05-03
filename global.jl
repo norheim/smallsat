@@ -4,6 +4,10 @@ using PiecewiseLinearOpt
 
 # Define data
 include("data.jl")
+@assert length(h_ρi) == length(ρi) == length(Hi)
+@assert issorted(h_ρi)
+@assert issorted(ρi, rev=true)
+@assert issorted(Hi)
 
 # Define global model in log-space
 function global_model(solver, n_pts::Int)
@@ -41,7 +45,9 @@ function global_model(solver, n_pts::Int)
         #e_min <= e <= e_max # eclipse fraction of orbit
         g_min <= g <= g_max # ground station viewing fraction of orbit
         
-        # Lifetime variables
+        h_ρi[1] <= h_ρ <= h_ρi[end]
+
+        # Lifetime 
         Ln # seconds, lifetime without propulsion(natural orbit decay)
         Lp # seconds, lifetime with propulsion
         ρ # kg/m3 atmospheric density
@@ -93,14 +99,18 @@ function global_model(solver, n_pts::Int)
         η_A == dot(x_A, η_Ai)
     end
 
-    # Nonconvex extended formulation piecewiselinear approx
+    # Piecewiselinear function values from data table
+    ρ = piecewiselinear(m, h_ρ, h_ρi, ρi)
+    H = piecewiselinear(m, h_ρ, h_ρi, Hi)
+
+    # Piecewiselinear function approximations
     brk_log = (v_min, v_max, num_pts) -> log.(linspace(exp(v_min), exp(v_max), num_pts))
     pwgraph_exp_d = piecewiselinear(m, d, brk_log(d_min, d_max, n_pts), exp) # convex
     #pwgraph_exp_e = piecewiselinear(m, e, brk_log(e_min, e_max, n_pts), exp) # convex
     pwgraph_exp_g = piecewiselinear(m, g, brk_log(g_min, g_max, n_pts), exp) # convex
     fhR = h_val -> log(acos(1/(exp(h_val - R) + 1))) # instead of linearized
     pwgraph_fhR = piecewiselinear(m, h, brk_log(h_min, h_max, n_pts), fhR) # concave
-
+    
     # Convex extended formulation constraints
     @NLconstraints m begin
         exp(P_T - P_t) <= exp_pTt
@@ -173,27 +183,6 @@ function global_model(solver, n_pts::Int)
     println("  payload: ", find(i -> (i > 0.5), getvalue(x_p)))
     println("  solar panel: ", find(i -> (i > 0.5), getvalue(x_A)))
     println()
-
-    # @show exp(getvalue(D_p))
-    # @show exp(getvalue(D_T))
-    # @show exp(getvalue(A))
-    # @show exp(getvalue(m_t))
-    # @show exp(getvalue(m_b))
-    # @show exp(getvalue(m_A))
-    # @show exp(getvalue(m_p))
-    # @show exp(getvalue(m_T))
-    # @show exp(getvalue(m_S))
-    # @show exp(getvalue(m_P))
-    # @show exp(getvalue(P_t))
-    # @show exp(getvalue(P_T))
-    # @show exp(getvalue(E_b))
-    # @show exp(getvalue(h))
-    # @show exp(getvalue(a))
-    # @show exp(getvalue(T))
-    # @show exp(getvalue(r))
-    # @show exp(getvalue(d))
-    # @show exp(getvalue(e))
-    # @show exp(getvalue(g))
     ;
 end
 
