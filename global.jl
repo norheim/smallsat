@@ -54,6 +54,12 @@ function global_model(solver, n_pts::Int)
         exp_mSt
         exp_mct
         exp_d
+        
+        # Component related variables
+        x_T[1:2], Bin
+        x_b[1:5], Bin
+        x_p[1:2], Bin
+        x_A[1:2], Bin
     end
 
     # Nonconvex extended formulation piecewiselinear approx
