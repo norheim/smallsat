@@ -27,7 +27,7 @@ X_r = log(20) # m
 m_c = log(0.2) # kg required weight
 η_S = log(0.2) # 20% of total mass is structural mass
 C_D = log(2.2) #unitless, coefficient of drag
-L_t = log(3*3600*24*365) # just putting in a random lifetime of three years
+Lt = log(3*3600*24*365) # just putting in a random lifetime of three years
 G = log(9.81) #m/s2 gravitational constant
 I_sp = log(536) #seconds Impulse specific constant
 
