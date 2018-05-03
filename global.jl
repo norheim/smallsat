@@ -47,11 +47,11 @@ function global_model(solver, n_pts::Int)
         
         h_ρi[1] <= h_ρ <= h_ρi[end]
 
-        # Lifetime 
-        Ln # seconds, lifetime without propulsion(natural orbit decay)
-        Lp # seconds, lifetime with propulsion
-        ρ # kg/m3 atmospheric density
-        H # m atmosphere scale height
+        # Lifetime (years)
+        exp_Ln_min <= exp_Ln <= exp_Ln_max # without propulsion (orbit decay)
+        exp_Lp_min <= exp_Lp <= exp_Lp_max # with propulsion
+        ρ # atmospheric density
+        H # atmosphere scale height
         
         # Auxiliary variables
         exp_pTt
@@ -68,8 +68,6 @@ function global_model(solver, n_pts::Int)
         exp_mSt
         exp_mct
         exp_d
-        exp_Ln
-        exp_Lp
         
         # Component related variables
         x_T[1:n_T], Bin
@@ -105,11 +103,15 @@ function global_model(solver, n_pts::Int)
 
     # Piecewiselinear function approximations
     brk_log = (v_min, v_max, num_pts) -> log.(linspace(exp(v_min), exp(v_max), num_pts))
+    # Orbit
+    fhR = h_val -> log(acos(1/(exp(h_val - R) + 1))) # instead of linearized
+    pwgraph_fhR = piecewiselinear(m, h, brk_log(h_min, h_max, n_pts), fhR) # concave
     pwgraph_exp_d = piecewiselinear(m, d, brk_log(d_min, d_max, n_pts), exp) # convex
     #pwgraph_exp_e = piecewiselinear(m, e, brk_log(e_min, e_max, n_pts), exp) # convex
     pwgraph_exp_g = piecewiselinear(m, g, brk_log(g_min, g_max, n_pts), exp) # convex
-    fhR = h_val -> log(acos(1/(exp(h_val - R) + 1))) # instead of linearized
-    pwgraph_fhR = piecewiselinear(m, h, brk_log(h_min, h_max, n_pts), fhR) # concave
+    # Lifetime
+    pwgraph_Ln = piecewiselinear(m, exp_Ln, linspace(exp_Ln_min, exp_Ln_max, n_pts), log) # concave
+    pwgraph_Lp = piecewiselinear(m, exp_Lp, linspace(exp_Lp_min, exp_Lp_max, n_pts), log) # concave
     
     # Convex extended formulation constraints
     @NLconstraints m begin
@@ -119,6 +121,7 @@ function global_model(solver, n_pts::Int)
         exp(h - a) <= exp_ha
         exp(2*h - 2*r) <= exp_hr
         exp(log(2) + R + h - 2*r) <= exp_Rhr
+        # Mass
         exp(m_b - m_t) <= exp_mbt
         exp(m_p - m_t) <= exp_mpt
         exp(m_A - m_t) <= exp_mAt
@@ -126,10 +129,9 @@ function global_model(solver, n_pts::Int)
         exp(m_P - m_t) <= exp_mPt
         exp(m_S - m_t) <= exp_mSt
         exp(m_c - m_t) <= exp_mct
+        # Orbit
         exp(d) <= exp_d
         log(π) + g <= log(acos(1/(exp(h - R) + 1))) # instead of linearized
-        exp(Ln - Lt) <= exp_Ln
-        exp(Lp - Lt) <= exp_Lp
     end
 
     # Linear constraints
@@ -150,9 +152,10 @@ function global_model(solver, n_pts::Int)
         #m_T == ρ_T + 3/2*D_T
         #m_P == ρ_P - h
         m_S == η_S + m_t
-        Ln == H + m_t + T - log(2π) - C_D - A - 2*h - ρ
-        Lp == m_P + I_sp + G + a - log(0.5) - C_D - A - ρ - μ
-        exp_Ln + exp_Lp <= 1
+        # Lifetime
+        pwgraph_Ln + log(3600*24*365) == H + m_t + T - log(2π) - C_D - A - 2*h - ρ
+        pwgraph_Lp + log(3600*24*365) == m_P + I_sp + G + a - log(0.5) - C_D - A - ρ - μ
+        exp_Ln + exp_Lp >= exp_Lt_min
         # From convex constraints
         exp_pTt + exp_Plt <= 1
         exp_Ra + exp_ha <= 1

@@ -26,14 +26,20 @@ P_l = log(5) # W
 X_r = log(20) # m
 m_c = log(0.2) # kg required weight
 η_S = log(0.2) # 20% of total mass is structural mass
-C_D = log(2.2) #unitless, coefficient of drag
-Lt = log(3*3600*24*365) # just putting in a random lifetime of three years
-G = log(9.81) #m/s2 gravitational constant
-I_sp = log(536) #seconds Impulse specific constant
+C_D = log(2.2) # coefficient of drag
+G = log(9.81) # m/s^2 gravitational constant
+I_sp = log(536) # s impulse specific constant
 
 λ_c = c - f
 G_r = η + 2*(log(π) + D_r - λ_c)
 
+exp_Lt_min = 3 # years lifetime
+
+exp_Ln_min = 0.5
+exp_Ln_max = 25
+
+exp_Lp_min = 0.1
+exp_Lp_max = 10.0
 
 h_min = log(1e5) # orbit altitude
 h_max = log(2e6)
