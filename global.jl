@@ -42,8 +42,10 @@ function global_model(solver, n_pts::Int)
         g_min <= g <= g_max # ground station viewing fraction of orbit
         
         # Lifetime variables
-        Ln 
-        Lp 
+        Ln # seconds, lifetime without propulsion(natural orbit decay)
+        Lp # seconds, lifetime with propulsion
+        ρ # kg/m3 atmospheric density
+        H # m atmosphere scale height
         
         # Auxiliary variables
         exp_pTt
@@ -139,7 +141,7 @@ function global_model(solver, n_pts::Int)
         #m_P == ρ_P - h
         m_S == η_S + m_t
         Ln == H + m + T - log(2π) - C_D - A - 2*h - ρ
-        Lp == m_P + I_sp + g + a - log(0.5) - C_D - A - ρ - μ
+        Lp == m_P + I_sp + G + a - log(0.5) - C_D - A - ρ - μ
         exp_Ln + exp_Lp <= 1
         # From convex constraints
         exp_pTt + exp_Plt <= 1
