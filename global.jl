@@ -150,7 +150,7 @@ function global_model(solver, n_pts::Int)
         #m_T == ρ_T + 3/2*D_T
         #m_P == ρ_P - h
         m_S == η_S + m_t
-        Ln == H + m + T - log(2π) - C_D - A - 2*h - ρ
+        Ln == H + m_t + T - log(2π) - C_D - A - 2*h - ρ
         Lp == m_P + I_sp + G + a - log(0.5) - C_D - A - ρ - μ
         exp_Ln + exp_Lp <= 1
         # From convex constraints
