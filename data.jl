@@ -38,7 +38,7 @@ exp_Lt_min = 3 # years lifetime
 exp_Ln_min = 0.5
 exp_Ln_max = 25
 
-exp_Lp_min = 0.1
+exp_Lp_min = 0.01
 exp_Lp_max = 10.0
 
 h_min = log(1e5) # orbit altitude
