@@ -57,6 +57,7 @@ function global_model(solver, n_pts::Int)
         D_W # size of reaction wheel
         m_W # mass for reaction wheel
         m_M # mass for magnetorques
+        T_g
 
         # Auxiliary variables
         exp_pTt
@@ -73,6 +74,7 @@ function global_model(solver, n_pts::Int)
         exp_mSt
         exp_mct
         exp_d
+        exp_mMWt
 
         # Component related variables
         x_W, Bin
@@ -165,7 +167,7 @@ function global_model(solver, n_pts::Int)
         # Lifetime
         pwgraph_Ln + log(3600*24*365) == H + m_t + T - log(2π) - C_D - A - 2*h - ρ
         pwgraph_Lp + log(3600*24*365) == m_P + I_sp + G + a - log(0.5) - C_D - A - ρ - μ
-        # exp_Ln + exp_Lp >= exp_Lt_min
+        exp_Ln + exp_Lp >= exp_Lt_min
         # From convex constraints
         exp_pTt + exp_Plt <= 1
         exp_Ra + exp_ha <= 1
@@ -173,40 +175,42 @@ function global_model(solver, n_pts::Int)
 
         exp_mbt + exp_mpt + exp_mAt + exp_mTt + exp_mPt + exp_mSt + exp_mct + exp_mMWt <= 1
 
-        # Gravity gradient accumulated torque
-        T_g == log(3) + μ + c_W - log(2) - 3*a
-
         # From nonconvex constraints
         exp_d <= pwgraph_exp_d
         #pwgraph_exp_e + exp_d >= 1
         exp_d <= pwgraph_exp_g + 1/2
         log(π) + g >= pwgraph_fhR
 
+        # Gravity gradient accumulated torque
+        T_g == log(3) + μ + c_W - log(2) - 3*a
+
         # Disjunctive constraints
         # Option 1, reaction wheel
         log(0.5) + m_W + 2*D_W + w_W == T + T_g
         m_W == rho_W + 2*D_W
-
         # Option 2, magnetorquers
         m_M - rho_M == T_g - h
     end
 
     # Minimize total mass
-    # @objective(m, Min, m_t)
-    @objective(m, Max, exp_Ln + exp_Lp)
+    @objective(m, Min, m_t)
+    # @objective(m, Max, exp_Ln + exp_Lp)
 
     # Solve
     status = solve(m)
     println()
     println("  status: ", status)
+    println()
     println("  total mass: ", exp(getvalue(m_t)))
+    println()
+    println("  Ln = ", getvalue(exp_Ln))
+    println("  Lp = ", getvalue(exp_Lp))
     println()
     println("  d = ", exp(getvalue(d)))
     #println("  e = ", exp(getvalue(e)))
     println("  g = ", exp(getvalue(g)))
     println()
-    println("  Ln = ", getvalue(exp_Ln))
-    println("  Lp = ", getvalue(exp_Lp))
+    println("  M or W: ", getvalue(x_W) > 0.5 ? "W" : "M")
     println()
     println("  transmitter: ", find(i -> (i > 0.5), getvalue(x_T)))
     println("  battery: ", find(i -> (i > 0.5), getvalue(x_b)))
@@ -225,7 +229,7 @@ global_solver = MINLPOASolver(log_level=1, mip_solver=CplexSolver(CPX_PARAM_SCRI
 global_model(global_solver, 1000)
 
 
-
+#
 # using Ipopt
 # using Pajarito
 # global_solver = PajaritoSolver(
@@ -234,3 +238,6 @@ global_model(global_solver, 1000)
 #     mip_solver_drives=true,
 #     log_level=1,
 #     rel_gap=1e-7)
+#
+#
+# global_model(global_solver, 1000)
