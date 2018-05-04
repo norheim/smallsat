@@ -192,21 +192,20 @@ function global_model(solver, n_pts::Int)
 end
 
 # Define solvers
-using Ipopt
 using CPLEX
-using Pajarito
 using MINLPOA
-
-global_solver = PajaritoSolver(
-    mip_solver=CplexSolver(CPX_PARAM_SCRIND=1, CPX_PARAM_EPINT=1e-9, CPX_PARAM_EPRHS=1e-9, CPX_PARAM_EPGAP=1e-7),
-    cont_solver=IpoptSolver(print_level=0),
-    mip_solver_drives=true,
-    log_level=1,
-    rel_gap=1e-7)
-
-# cont_solver = IpoptSolver(print_level=0)
-#
-# global_solver = MINLPOASolver(log_level=1, mip_solver=CplexSolver(CPX_PARAM_SCRIND=1, CPX_PARAM_EPINT=1e-9, CPX_PARAM_EPRHS=1e-9, CPX_PARAM_EPGAP=1e-7))
+global_solver = MINLPOASolver(log_level=1, mip_solver=CplexSolver(CPX_PARAM_SCRIND=1, CPX_PARAM_EPINT=1e-9, CPX_PARAM_EPRHS=1e-9, CPX_PARAM_EPGAP=1e-7))
 
 # Run
-global_model(global_solver, 60)
+global_model(global_solver, 1000)
+
+
+
+# using Ipopt
+# using Pajarito
+# global_solver = PajaritoSolver(
+#     mip_solver=CplexSolver(CPX_PARAM_SCRIND=1, CPX_PARAM_EPINT=1e-9, CPX_PARAM_EPRHS=1e-9, CPX_PARAM_EPGAP=1e-7),
+#     cont_solver=IpoptSolver(print_level=0),
+#     mip_solver_drives=true,
+#     log_level=1,
+#     rel_gap=1e-7)
