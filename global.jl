@@ -18,12 +18,12 @@ function global_model(solver, n_pts::Int)
         # Subsystem specific parameters
         D_p # payload optical aperture diameter
         D_T # transmitter antenna diameter
-        A # solar panel surface area     
+        A # solar panel surface area
         ρ_A
         η_A
 
         # Mass related parameters
-        m_t # total mass
+        m_t >= m_c # total mass
         m_b # battery mass
         m_A # solar panel mass
         m_p # payload mass
@@ -44,7 +44,7 @@ function global_model(solver, n_pts::Int)
         d_min <= d <= d_max # daylight fraction of orbit
         #e_min <= e <= e_max # eclipse fraction of orbit
         g_min <= g <= g_max # ground station viewing fraction of orbit
-        
+
         h_ρi[1] <= h_ρ <= h_ρi[end]
 
         # Lifetime (years)
@@ -52,7 +52,7 @@ function global_model(solver, n_pts::Int)
         exp_Lp_min <= exp_Lp <= exp_Lp_max # with propulsion
         ρ # atmospheric density
         H # atmosphere scale height
-        
+
         # Auxiliary variables
         exp_pTt
         exp_Plt
@@ -68,6 +68,7 @@ function global_model(solver, n_pts::Int)
         exp_mSt
         exp_mct
         exp_d
+
         
         # Disjonctive variables
         D_W #size of reaction wheel
@@ -79,7 +80,7 @@ function global_model(solver, n_pts::Int)
         x_p[1:n_p], Bin
         x_A[1:n_A], Bin
     end
-    
+
     # Catalog selections
     @constraints m begin
         sum(x_T) == 1 # transmitter catalog
@@ -91,7 +92,7 @@ function global_model(solver, n_pts::Int)
         sum(x_b) == 1 # battery catalog
         E_b == dot(x_b, E_bi)
         m_b == dot(x_b, m_bi)
-        
+
         sum(x_p) == 1 # payload catalog
         D_p == dot(x_p, D_pi)
         m_p == dot(x_p, m_pi)
@@ -115,7 +116,7 @@ function global_model(solver, n_pts::Int)
     # Lifetime
     pwgraph_Ln = piecewiselinear(m, exp_Ln, linspace(exp_Ln_min, exp_Ln_max, n_pts), log) # concave
     pwgraph_Lp = piecewiselinear(m, exp_Lp, linspace(exp_Lp_min, exp_Lp_max, n_pts), log) # concave
-    
+
     # Convex extended formulation constraints
     @NLconstraints m begin
         exp(P_T - P_t) <= exp_pTt
@@ -214,16 +215,20 @@ function global_model(solver, n_pts::Int)
 end
 
 # Define solvers
-using Ipopt
 using CPLEX
-using Pajarito
-
-global_solver = PajaritoSolver(
-    mip_solver=CplexSolver(CPX_PARAM_SCRIND=1, CPX_PARAM_EPINT=1e-9, CPX_PARAM_EPRHS=1e-9, CPX_PARAM_EPGAP=1e-7),
-    cont_solver=IpoptSolver(print_level=0),
-    mip_solver_drives=true,
-    log_level=1,
-    rel_gap=1e-7)
+using MINLPOA
+global_solver = MINLPOASolver(log_level=1, mip_solver=CplexSolver(CPX_PARAM_SCRIND=1, CPX_PARAM_EPINT=1e-9, CPX_PARAM_EPRHS=1e-9, CPX_PARAM_EPGAP=1e-7))
 
 # Run
-global_model(global_solver, 60)
+global_model(global_solver, 1000)
+
+
+
+# using Ipopt
+# using Pajarito
+# global_solver = PajaritoSolver(
+#     mip_solver=CplexSolver(CPX_PARAM_SCRIND=1, CPX_PARAM_EPINT=1e-9, CPX_PARAM_EPRHS=1e-9, CPX_PARAM_EPGAP=1e-7),
+#     cont_solver=IpoptSolver(print_level=0),
+#     mip_solver_drives=true,
+#     log_level=1,
+#     rel_gap=1e-7)
