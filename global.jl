@@ -69,6 +69,10 @@ function global_model(solver, n_pts::Int)
         exp_mct
         exp_d
         
+        # Disjonctive variables
+        D_W #size of reaction wheel
+        m_M #mass for magnetorques
+        
         # Component related variables
         x_T[1:n_T], Bin
         x_b[1:n_b], Bin
@@ -128,6 +132,11 @@ function global_model(solver, n_pts::Int)
         exp(m_P - m_t) <= exp_mPt
         exp(m_S - m_t) <= exp_mSt
         exp(m_c - m_t) <= exp_mct
+        
+        # Disjonctive
+        exp(m_W - m_t) <= exp_mWt #option 1
+        exp(m_M - m_t) <= exp_mMt #option 2 
+        
         # Orbit
         exp(d) <= exp_d
         log(π) + g <= log(acos(1/(exp(h - R) + 1))) # instead of linearized
@@ -159,12 +168,25 @@ function global_model(solver, n_pts::Int)
         exp_pTt + exp_Plt <= 1
         exp_Ra + exp_ha <= 1
         exp_hr + exp_Rhr <= 1
-        exp_mbt + exp_mpt + exp_mAt + exp_mTt + exp_mPt + exp_mSt + exp_mct <= 1
+        
+        # Note that two variables are disjonctive
+        exp_mbt + exp_mpt + exp_mAt + exp_mTt + exp_mPt + exp_mSt + exp_mct + exp_mMt + exp_mWt<= 1
+        
+        
+        # Gravity gradient accumulated torque
+        T_g == log(3)+μ+c_W-log(2)-3*a
         # From nonconvex constraints
         exp_d <= pwgraph_exp_d
         #pwgraph_exp_e + exp_d >= 1
         exp_d <= pwgraph_exp_g + 1/2
         log(π) + g >= pwgraph_fhR
+        
+        # Disjunctive constraints
+        # Option 1, reaction wheel
+        log(0.5) + rho_W + 4*D_W + w_W == T + T_g
+        # Option 2, magnetorquers
+        D - rho_M == T_g - h
+        
     end
 
     # Minimize total mass
