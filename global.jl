@@ -23,7 +23,7 @@ function global_model(solver, n_pts::Int)
         η_A
 
         # Mass related parameters
-        m_t >= m_c # total mass
+        m_c <= m_t <= m_max # total mass
         m_b # battery mass
         m_A # solar panel mass
         m_p # payload mass
@@ -154,7 +154,7 @@ function global_model(solver, n_pts::Int)
         # Lifetime
         pwgraph_Ln + log(3600*24*365) == H + m_t + T - log(2π) - C_D - A - 2*h - ρ
         pwgraph_Lp + log(3600*24*365) == m_P + I_sp + G + a - log(0.5) - C_D - A - ρ - μ
-        exp_Ln + exp_Lp >= exp_Lt_min
+        # exp_Ln + exp_Lp >= exp_Lt_min
         # From convex constraints
         exp_pTt + exp_Plt <= 1
         exp_Ra + exp_ha <= 1
@@ -168,13 +168,14 @@ function global_model(solver, n_pts::Int)
     end
 
     # Minimize total mass
-    @objective(m, Min, m_t)
+    # @objective(m, Min, m_t)
+    @objective(m, Max, exp_Ln + exp_Lp)
 
     # Solve
     status = solve(m)
     println()
     println("  status: ", status)
-    println("  total mass: ", exp(getobjectivevalue(m)))
+    println("  total mass: ", exp(getvalue(m_t)))
     println()
     println("  d = ", exp(getvalue(d)))
     #println("  e = ", exp(getvalue(e)))
