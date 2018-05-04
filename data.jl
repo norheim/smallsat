@@ -29,6 +29,10 @@ m_c = log(0.2) # kg required weight
 C_D = log(2.2) # coefficient of drag
 G = log(9.81) # m/s^2 gravitational constant
 I_sp = log(536) # s impulse specific constant
+w_W = log(1000) # radians/s for maximum angular velocity of reaction wheel
+c_W = log(1000) # constant to maque gravity gradient significant enough to count
+rho_M = log(1) # density for mass of magnetorquers
+rho_W = log(100) # density for mass for reaction wheels
 
 λ_c = c - f
 G_r = η + 2*(log(π) + D_r - λ_c)
