@@ -55,8 +55,8 @@ function global_model(solver, n_pts::Int)
 
         # Disjunctive variables
         D_W # size of reaction wheel
-        m_W # mass for reaction wheel
-        m_M # mass for magnetorques
+        log(1e-2) <= m_W <= m_max # mass for reaction wheel
+        log(1e-2) <= m_M <= m_max # mass for magnetorques
         T_g
 
         # Auxiliary variables
@@ -74,7 +74,7 @@ function global_model(solver, n_pts::Int)
         exp_mSt
         exp_mct
         exp_d
-        exp_mMWt
+        exp_mMWt >= 0.0
 
         # Component related variables
         x_W, Bin
@@ -139,8 +139,10 @@ function global_model(solver, n_pts::Int)
         exp(m_P - m_t) <= exp_mPt
         exp(m_S - m_t) <= exp_mSt
         exp(m_c - m_t) <= exp_mct
-        (x_W + 1e-5)*exp((m_W - m_t)/(x_W + 1e-5)) <= exp_mMWt
-        (x_M + 1e-5)*exp((m_M - m_t)/(x_M + 1e-5)) <= exp_mMWt
+        # exp(m_W - m_t) <= exp_mMWt
+        # exp(m_M - m_t) <= exp_mMWt
+        (x_W + 1e-3)*exp((m_W - m_t)/(x_W + 1e-3)) <= exp_mMWt
+        (x_M + 1e-3)*exp((m_M - m_t)/(x_M + 1e-3)) <= exp_mMWt
         # Orbit
         exp(d) <= exp_d
         log(π) + g <= log(acos(1/(exp(h - R) + 1))) # instead of linearized
@@ -189,7 +191,7 @@ function global_model(solver, n_pts::Int)
         log(0.5) + m_W + 2*D_W + w_W == T + T_g
         m_W == rho_W + 2*D_W
         # Option 2, magnetorquers
-        m_M - rho_M == T_g - h
+        m_M == rho_M + T_g - h
     end
 
     # Minimize total mass
@@ -211,6 +213,8 @@ function global_model(solver, n_pts::Int)
     println("  g = ", exp(getvalue(g)))
     println()
     println("  M or W: ", getvalue(x_W) > 0.5 ? "W" : "M")
+    println("  m_W = ", exp(getvalue(m_W)))
+    println("  m_M = ", exp(getvalue(m_M)))
     println()
     println("  transmitter: ", find(i -> (i > 0.5), getvalue(x_T)))
     println("  battery: ", find(i -> (i > 0.5), getvalue(x_b)))
@@ -226,18 +230,17 @@ using MINLPOA
 global_solver = MINLPOASolver(log_level=1, mip_solver=CplexSolver(CPX_PARAM_SCRIND=1, CPX_PARAM_EPINT=1e-9, CPX_PARAM_EPRHS=1e-9, CPX_PARAM_EPGAP=1e-7))
 
 # Run
-global_model(global_solver, 1000)
-
-
-#
-# using Ipopt
-# using Pajarito
-# global_solver = PajaritoSolver(
-#     mip_solver=CplexSolver(CPX_PARAM_SCRIND=1, CPX_PARAM_EPINT=1e-9, CPX_PARAM_EPRHS=1e-9, CPX_PARAM_EPGAP=1e-7),
-#     cont_solver=IpoptSolver(print_level=0),
-#     mip_solver_drives=true,
-#     log_level=1,
-#     rel_gap=1e-7)
-#
-#
 # global_model(global_solver, 1000)
+
+
+
+using Ipopt
+using Pajarito
+global_solver = PajaritoSolver(
+    mip_solver=CplexSolver(CPX_PARAM_SCRIND=1, CPX_PARAM_EPINT=1e-9, CPX_PARAM_EPRHS=1e-9, CPX_PARAM_EPGAP=1e-7),
+    cont_solver=IpoptSolver(print_level=0),
+    mip_solver_drives=true,
+    log_level=1,
+    rel_gap=1e-7)
+
+global_model(global_solver, 1000)
