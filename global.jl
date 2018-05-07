@@ -167,8 +167,8 @@ function global_model(solver, n_pts::Int)
         #m_P == ρ_P - h
         m_S == η_S + m_t
         # Lifetime
-        pwgraph_Ln + log(3600*24*365) == H + m_t + T - log(2π) - C_D - A - 2*h - ρ
-        pwgraph_Lp + log(3600*24*365) == m_P + I_sp + G + a - log(0.5) - C_D - A - ρ - μ
+        pwgraph_Ln + log(3600*24*365) + log(0.001)== H + m_t - log(2π) - C_D - A - 2*a - ρ
+        pwgraph_Lp + log(3600*24*365) + log(0.1) == m_P + I_sp + G + a - log(0.5) - C_D - A - ρ - μ
         exp_Ln + exp_Lp >= exp_Lt_min
         # From convex constraints
         exp_pTt + exp_Plt <= 1
