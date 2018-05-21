@@ -4,9 +4,8 @@
 
 μ = log(3.986005e14) # m^3/s^2 standard gravitational parameter
 R = log(6378e3) # m
-#η_A = log(0.29)
 Q = log(1367) # W/m^2
-EN = log(40)
+EN = log(10)
 D_r = log(5.3) # m
 L = log(9.772372209558107)
 k = log(1.38064852e-23) # J/K Boltzman constant R/Na
@@ -17,13 +16,17 @@ N = log(2e3) # pixel width
 λ_v = log(500e-9) # m
 f = log(2.2e9) # Hz
 c = log(2.998e8) # m/s
-#ρ_A = log(10) # kg/m^2
-#ρ_p = log(100) # kg/m^1.5
-#ρ_T = log(2) # kg/m^1.5
+η_A = log(0.29)
+ρ_A = log(10) # kg/m^2
+ρ_p = log(100) # kg/m^1.5
+ρ_T = log(2) # kg/m^1.5
 ρ_P = log(500e3) # kg*m
-#ρ_b = log(0.1e-3) # kg/J
+ρ_b = log(0.002e-3) # kg/J
 P_l = log(5) # W
-X_r = log(20) # m
+
+X_r = log(15) # m
+m_t = log(3) #kg
+
 m_c = log(0.2) # kg required weight
 m_max = log(7)
 η_S = log(0.2) # 20% of total mass is structural mass
@@ -31,16 +34,18 @@ C_D = log(2.2) # coefficient of drag
 G = log(9.81) # m/s^2 gravitational constant
 I_sp = log(536) # s impulse specific constant
 w_W = log(1000) # radians/s for maximum angular velocity of reaction wheel
-c_W = log(1000) # constant to make gravity gradient significant enough to count
-rho_M = log(1e7) # density for mass of magnetorquers
-rho_W = log(100) # density for mass for reaction wheels
+c_W = log(1) # constant to make gravity gradient significant enough to count
+ρ_M = log(11e4)  #MTQ
+ρ_P2 = log(9/0.1) #acs
+M_B = log(7.96e15)
+
 
 λ_c = c - f
 G_r = η + 2*(log(π) + D_r - λ_c)
 
-exp_Lt_min = 3 # years lifetime
+exp_Lt_min = 5 # years lifetime
 
-exp_Ln_min = 0.5
+exp_Ln_min = 0.1
 exp_Ln_max = 25
 
 exp_Lp_min = 0.01
@@ -52,8 +57,8 @@ h_max = log(2e6)
 d_min = log(0.1) # daylight fraction of orbit
 d_max = log(0.9)
 
-#e_min = log(0.1) # eclipse fraction of orbit
-#e_max = log(0.9)
+e_min = log(0.1) # eclipse fraction of orbit
+e_max = log(0.9)
 
 exp_RhR_min = 1/(exp(h_min - R) + 1)
 exp_RhR_max = 1/(exp(h_max - R) + 1)
@@ -64,7 +69,7 @@ g_max = log(acos(exp_RhR_max)/pi)
 
 n_T = 2 # transmitter catalog
 D_Ti = log.([0.07, 0.14])
-m_Ti = log.([0.053, 0.300])
+m_Ti = log.([0.253, 0.300])
 P_Ti = log.([10, 10])
 #G_Ti = log.([10, 44.7])
 
