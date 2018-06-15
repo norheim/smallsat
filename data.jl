@@ -25,10 +25,10 @@ c = log(2.998e8) # m/s
 P_l = log(5) # W
 
 X_r = log(15) # m
-m_t = log(3) #kg
 
 m_c = log(0.2) # kg required weight
 m_max = log(7)
+m_min = log(3)
 η_S = log(0.2) # 20% of total mass is structural mass
 C_D = log(2.2) # coefficient of drag
 G = log(9.81) # m/s^2 gravitational constant

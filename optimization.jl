@@ -26,7 +26,7 @@ function global_model(solver, n_pts::Int)
 
         # Mass related parameters
         #X_r
-        m_t # total mass
+        m_t >= m_min # total mass
         m_b # battery mass
         m_A # solar panel mass
         m_p # payload mass
@@ -203,7 +203,7 @@ function global_model(solver, n_pts::Int)
     println("  status: ", status)
     println("  total mass: ", exp(getvalue(m_t)))
     println("  payload: ", find(i -> (i > 0.5), getvalue(x_p)))
-    println("  payload res: ", exp(X_r), ">|", exp(getvalue(h) + λ_v - getvalue(D_p)))
+    println("  payload res: ", exp(X_r), " >| ", exp(getvalue(h) + λ_v - getvalue(D_p)))
     println("  battery: ", find(i -> (i > 0.5), getvalue(x_b)))
     println("  battery energy: ", exp(getvalue(E_b)))
     println("  battery_mass: ", exp(getvalue(m_b)))
@@ -223,58 +223,38 @@ function global_model(solver, n_pts::Int)
     println("  T_g = ", exp(getvalue(T_g)))
     println("  m_P2 = ", exp(getvalue(m_P2)))
     println("  m_M = ", exp(getvalue(m_M)))
-    println("  h =", getvalue(h), " | ", exp(getvalue(h))/1000)
-    println("  a =", getvalue(a), " | ", exp(getvalue(a))/1000-6378)
-    println("  T =", exp(getvalue(T))/60)
-    println("  R =", R, " | ", exp(R))
+    println("  h = ", getvalue(h), " | ", exp(getvalue(h))/1000)
+    println("  a = ", getvalue(a), " | ", exp(getvalue(a))/1000-6378)
+    println("  T = ", exp(getvalue(T))/60)
+    println("  R = ", R, " | ", exp(R))
     #println("  Ra =", getvalue(exp_Ra), " >| ", exp(R - getvalue(a)))
     #println("  ha =", getvalue(exp_ha), " >| ", exp(getvalue(h) - getvalue(a)))
     println("  d = ", exp(getvalue(d)))
     println("  e = ", exp(getvalue(e)))
     println("  g = ", exp(getvalue(g)))
     println()
-
-    # @show exp(getvalue(D_p))
-    # @show exp(getvalue(D_T))
-    # @show exp(getvalue(A))
-    # @show exp(getvalue(m_t))
-    # @show exp(getvalue(m_b))
-    # @show exp(getvalue(m_A))
-    # @show exp(getvalue(m_p))
-    # @show exp(getvalue(m_T))
-    # @show exp(getvalue(m_S))
-    # @show exp(getvalue(m_P))
-    # @show exp(getvalue(P_t))
-    # @show exp(getvalue(P_T))
-    # @show exp(getvalue(E_b))
-    # @show exp(getvalue(h))
-    # @show exp(getvalue(a))
-    # @show exp(getvalue(T))
-    # @show exp(getvalue(r))
-    # @show exp(getvalue(d))
-    # @show exp(getvalue(e))
-    # @show exp(getvalue(g))
-    ;
 end
 
 # Define solvers
 using CPLEX
+mip_solver = CplexSolver(CPX_PARAM_SCRIND=1, CPX_PARAM_EPINT=1e-9, CPX_PARAM_EPRHS=1e-9, CPX_PARAM_EPGAP=1e-7)
+
 using MINLPOA
-global_solver = MINLPOASolver(log_level=1, mip_solver=CplexSolver(CPX_PARAM_SCRIND=1, CPX_PARAM_EPINT=1e-9, CPX_PARAM_EPRHS=1e-9, CPX_PARAM_EPGAP=1e-7))
+global_solver = MINLPOASolver(log_level=1, mip_solver=mip_solver)
 
 # Run
-#global_model(global_solver, 1000)
+global_model(global_solver, 100)
 
-# Define solvers
-using Ipopt
-using Pajarito
-
-global_solver = PajaritoSolver(
-    mip_solver=CplexSolver(CPX_PARAM_SCRIND=1, CPX_PARAM_EPINT=1e-9, CPX_PARAM_EPRHS=1e-9, CPX_PARAM_EPGAP=1e-7),
-    cont_solver=IpoptSolver(print_level=0),
-    mip_solver_drives=true,
-    log_level=1,
-    rel_gap=1e-7)
-
-# Run
-global_model(global_solver, 60)
+# # Define solvers
+# using Ipopt
+# using Pajarito
+#
+# global_solver = PajaritoSolver(
+#     mip_solver=mip_solver,
+#     cont_solver=IpoptSolver(print_level=0),
+#     mip_solver_drives=true,
+#     log_level=1,
+#     rel_gap=1e-7)
+#
+# # Run
+# global_model(global_solver, 100)
