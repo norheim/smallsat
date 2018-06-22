@@ -55,13 +55,13 @@ function global_model(solver, n_pts::Int)
         H # atmosphere scale height
         h_ρi[1] <= h_ρ <= h_ρi[end]
 
-        # Disjonctive
+        # Disjunctive
         T_g
         log(1e-2) <= m_P2 <= log(10) # mass for reaction wheel
         log(1e-2) <= m_M <= log(10) # mass for magnetorques
 
         # Auxiliary variables
-        exp_pTt
+        exp_PTt
         exp_Plt
         exp_Ra
         exp_ha
@@ -76,7 +76,7 @@ function global_model(solver, n_pts::Int)
         exp_mct
         exp_d
 
-        # Disjonctive
+        # Disjunctive
         exp_mMPt >= 0.0
 
         # Component related variables
@@ -90,6 +90,8 @@ function global_model(solver, n_pts::Int)
 
     # Catalog selections
     @constraints m begin
+        x_P2 + x_M == 1
+
         sum(x_T) == 1 # transmitter catalog
         D_T == dot(x_T, D_Ti)
         m_T == dot(x_T, m_Ti)
@@ -130,13 +132,19 @@ function global_model(solver, n_pts::Int)
 
     # Convex extended formulation constraints
     @NLconstraints m begin
-        exp(P_T - P_t) <= exp_pTt
-        exp(P_l - P_t) <= exp_Plt
-
-        #exp(R - a) <= exp_Ra
-        #exp(h - a) <= exp_ha
         exp(2*h - 2*r) <= exp_hr
         exp(log(2) + R + h - 2*r) <= exp_Rhr
+
+        exp(d) <= exp_d
+        log(π) + g <= log(acos(1/(exp(h - R) + 1)))
+
+        exp(m_P2 - m_t) <= exp_mMPt
+        exp(m_M - m_t) <= exp_mMPt
+        (x_P2 + 1e-3)*exp((m_P2 - m_t)/(x_P2 + 1e-3)) <= exp_mMPt
+        (x_M + 1e-3)*exp((m_M - m_t)/(x_M + 1e-3)) <= exp_mMPt
+
+        exp(P_T - P_t) <= exp_PTt
+        exp(P_l - P_t) <= exp_Plt
 
         exp(m_b - m_t) <= exp_mbt
         exp(m_p - m_t) <= exp_mpt
@@ -145,13 +153,6 @@ function global_model(solver, n_pts::Int)
         exp(m_P - m_t) <= exp_mPt
         exp(m_S - m_t) <= exp_mSt
         exp(m_c - m_t) <= exp_mct
-        exp(d) <= exp_d
-        log(π) + g <= log(acos(1/(exp(h - R) + 1))) # instead of linearized
-
-        exp(m_P2 - m_t) <= exp_mMPt
-        exp(m_M - m_t) <= exp_mMPt
-        (x_P2 + 1e-3)*exp((m_P2 - m_t)/(x_P2 + 1e-3)) <= exp_mMPt
-        (x_M + 1e-3)*exp((m_M - m_t)/(x_M + 1e-3)) <= exp_mMPt
     end
 
     # Linear constraints
@@ -160,28 +161,32 @@ function global_model(solver, n_pts::Int)
         P_t - d == A + η_A + Q
         E_b >= P_t - d + T
         EN + L + k + T_s + R + log(2π) + N + B + log(4) + 2*r <= P_T + G_r + X_r + g + T + η + 2*D_T
+
         # Payload performance
         X_r >= h + λ_v - D_p
+
         # Orbit
         # g == α_1 + γ_1*(h - R) # linearized
         a == pwgraph_a
         T - log(2π) == (3*a - μ)/2
+
         # Mass budgets
         m_A == ρ_A + A
         #m_P == ρ_P - h
         m_S == η_S + m_t
 
-        #lifetime
+        # lifetime
         pwgraph_Ln + log(3600*24*365) == H + m_t - log(2π) - C_D - A - 2*a - ρ
         pwgraph_Lp + log(3600*24*365) == log(0.00002) + m_P + I_sp + G + a - log(0.5) - C_D - A - ρ - μ
         exp_Ln + exp_Lp >= exp_Lt_min
         h_ρ == h
 
         # From convex constraints
-        exp_pTt + exp_Plt <= 1
+        exp_PTt + exp_Plt <= 1
         #exp_Ra + exp_ha <= 1
         exp_hr + exp_Rhr <= 1
         exp_mbt + exp_mpt + exp_mPt + exp_mAt + exp_mTt + exp_mSt + exp_mct + exp_mMPt<= 1
+
         # From nonconvex constraints
         exp_d <= pwgraph_exp_d
         pwgraph_exp_e + exp_d == 1
@@ -199,17 +204,17 @@ function global_model(solver, n_pts::Int)
 
     # Solve
     status = solve(m)
-    println("\nglobal:")
+
     println("  status: ", status)
     println("  total mass: ", exp(getvalue(m_t)))
     println("  payload: ", find(i -> (i > 0.5), getvalue(x_p)))
-    println("  payload res: ", exp(X_r), " >| ", exp(getvalue(h) + λ_v - getvalue(D_p)))
+    println("  payload res: ", exp(X_r), " | ", exp(getvalue(h) + λ_v - getvalue(D_p)))
     println("  battery: ", find(i -> (i > 0.5), getvalue(x_b)))
     println("  battery energy: ", exp(getvalue(E_b)))
     println("  battery_mass: ", exp(getvalue(m_b)))
     println("  structural_mass: ", exp(getvalue(m_S)))
     println("  transmitter: ", find(i -> (i > 0.5), getvalue(x_T)))
-    println("  transmitter_mass, D: ", exp(getvalue(m_T)), ",", exp(getvalue(D_T)))
+    println("  transmitter_mass, D: ", exp(getvalue(m_T)), ", ", exp(getvalue(D_T)))
     println("  solar panel: ", find(i -> (i > 0.5), getvalue(x_A)))
     println("  solar panel area: ", exp(getvalue(A)))
     println("  solar_mass: ", exp(getvalue(m_A)))
