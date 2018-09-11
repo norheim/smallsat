@@ -205,61 +205,62 @@ function global_model(solver, n_pts::Int)
     # Solve
     status = solve(m)
 
-    println("  status: ", status)
-    println("  total mass: ", exp(getvalue(m_t)))
-    println("  payload: ", find(i -> (i > 0.5), getvalue(x_p)))
-    println("  payload res: ", exp(X_r), " | ", exp(getvalue(h) + λ_v - getvalue(D_p)))
-    println("  battery: ", find(i -> (i > 0.5), getvalue(x_b)))
-    println("  battery energy: ", exp(getvalue(E_b)))
-    println("  battery_mass: ", exp(getvalue(m_b)))
-    println("  structural_mass: ", exp(getvalue(m_S)))
-    println("  transmitter: ", find(i -> (i > 0.5), getvalue(x_T)))
-    println("  transmitter_mass, D: ", exp(getvalue(m_T)), ", ", exp(getvalue(D_T)))
-    println("  solar panel: ", find(i -> (i > 0.5), getvalue(x_A)))
-    println("  solar panel area: ", exp(getvalue(A)))
-    println("  solar_mass: ", exp(getvalue(m_A)))
-    println("  Ln = ", getvalue(exp_Ln))
-    println("  Lp = ", getvalue(exp_Lp))
-    println("  h_ρ = ", exp(getvalue(h_ρ))/1000)
-    println("  H = ", exp(getvalue(H))/1000)
-    println("  ρ = ", exp(getvalue(ρ)))
-    println("  propulsion mass: ", exp(getvalue(m_P)))
-    println("  M or P: ", getvalue(x_P2) > 0.5 ? "P" : "M")
-    println("  T_g = ", exp(getvalue(T_g)))
-    println("  m_P2 = ", exp(getvalue(m_P2)))
-    println("  m_M = ", exp(getvalue(m_M)))
-    println("  h = ", getvalue(h), " | ", exp(getvalue(h))/1000)
-    println("  a = ", getvalue(a), " | ", exp(getvalue(a))/1000-6378)
-    println("  T = ", exp(getvalue(T))/60)
-    println("  R = ", R, " | ", exp(R))
+    # println("  status: ", status)
+    println("some results:")
+    @printf("%25s: %12.5e\n", "total mass", exp(getvalue(m_t)))
+    @printf("%25s: %12d\n", "payload", find(i -> (i > 0.5), getvalue(x_p))[1])
+    @printf("%25s: %12d\n", "battery", find(i -> (i > 0.5), getvalue(x_b))[1])
+    @printf("%25s: %12.5e\n", "battery energy", exp(getvalue(E_b)))
+    @printf("%25s: %12.5e\n", "battery mass", exp(getvalue(m_b)))
+    @printf("%25s: %12.5e\n", "structural mass", exp(getvalue(m_S)))
+    @printf("%25s: %12d\n", "transmitter", find(i -> (i > 0.5), getvalue(x_T))[1])
+    @printf("%25s: %12.5e\n", "transmitter mass", exp(getvalue(m_T)))
+    @printf("%25s: %12d\n", "solar panel", find(i -> (i > 0.5), getvalue(x_A))[1])
+    @printf("%25s: %12.5e\n", "solar panel area", exp(getvalue(A)))
+    @printf("%25s: %12.5e\n", "solar panel mass", exp(getvalue(m_A)))
+    @printf("%25s: %12.5e\n", "propulsion mass", exp(getvalue(m_P)))
+    @printf("%25s: %12s\n", "attitude controller", (getvalue(x_P2) > 0.5 ? "reac. wheel" : "mag."))
+    @printf("%25s: %12.5e\n", "lifetime no propulsion", getvalue(exp_Ln))
+    @printf("%25s: %12.5e\n", "lifetime from propulsion", getvalue(exp_Ln))
+
+    # println("  h_ρ = ", exp(getvalue(h_ρ))/1000)
+    # println("  H = ", exp(getvalue(H))/1000)
+    # println("  ρ = ", exp(getvalue(ρ)))
+    # println("  T_g = ", exp(getvalue(T_g)))
+    # println("  m_P2 = ", exp(getvalue(m_P2)))
+    # println("  m_M = ", exp(getvalue(m_M)))
+    # println("  h = ", getvalue(h), " | ", exp(getvalue(h))/1000)
+    # println("  a = ", getvalue(a), " | ", exp(getvalue(a))/1000-6378)
+    # println("  T = ", exp(getvalue(T))/60)
+    # println("  R = ", R, " | ", exp(R))
     #println("  Ra =", getvalue(exp_Ra), " >| ", exp(R - getvalue(a)))
     #println("  ha =", getvalue(exp_ha), " >| ", exp(getvalue(h) - getvalue(a)))
-    println("  d = ", exp(getvalue(d)))
-    println("  e = ", exp(getvalue(e)))
-    println("  g = ", exp(getvalue(g)))
+    # println("  d = ", exp(getvalue(d)))
+    # println("  e = ", exp(getvalue(e)))
+    # println("  g = ", exp(getvalue(g)))
     println()
 end
 
-# Define solvers
-using CPLEX
-mip_solver = CplexSolver(CPX_PARAM_SCRIND=1, CPX_PARAM_EPINT=1e-9, CPX_PARAM_EPRHS=1e-9, CPX_PARAM_EPGAP=1e-7)
 
-using MINLPOA
-global_solver = MINLPOASolver(log_level=1, mip_solver=mip_solver)
+# MILP solver
+# using CPLEX
+# mip_solver = CplexSolver(CPX_PARAM_SCRIND=1, CPX_PARAM_EPINT=1e-9, CPX_PARAM_EPRHS=1e-9, CPX_PARAM_EPGAP=1e-7)
+using Gurobi
+mip_solver = Gurobi.GurobiSolver(OutputFlag=1, IntFeasTol=1e-9, FeasibilityTol=1e-9, MIPGap=1e-7)
 
-# Run
-global_model(global_solver, 100)
+# MINLP solver
+using DaChoppa
+global_solver = DaChoppaSolver(log_level=1, mip_solver=mip_solver)
 
-# # Define solvers
 # using Ipopt
-# using Pajarito
-#
-# global_solver = PajaritoSolver(
+# using Pavito
+# global_solver = PavitoSolver(
 #     mip_solver=mip_solver,
 #     cont_solver=IpoptSolver(print_level=0),
 #     mip_solver_drives=true,
 #     log_level=1,
-#     rel_gap=1e-7)
-#
-# # Run
-# global_model(global_solver, 100)
+#     rel_gap=1e-7,
+#     )
+
+# Run
+global_model(global_solver, 100)

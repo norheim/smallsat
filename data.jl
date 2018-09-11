@@ -1,6 +1,3 @@
-# γ_1 = 0.464835
-# α_1 = log(0.4009298)
-
 
 μ = log(3.986005e14) # m^3/s^2 standard gravitational parameter
 R = log(6378e3) # m
@@ -35,8 +32,8 @@ G = log(9.81) # m/s^2 gravitational constant
 I_sp = log(536) # s impulse specific constant
 w_W = log(1000) # radians/s for maximum angular velocity of reaction wheel
 c_W = log(1) # constant to make gravity gradient significant enough to count
-ρ_M = log(11e4)  #MTQ
-ρ_P2 = log(9/0.1) #acs
+ρ_M = log(11e4)  # MTQ
+ρ_P2 = log(9/0.1) # acs
 M_B = log(7.96e15)
 
 
