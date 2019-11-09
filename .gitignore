@@ -1,6 +1,7 @@
 # Created by .ignore support plugin (hsz.mobi)
 .idea/
 notebooks/*
+test.py
 !/notebooks/spacecraft.ipynb
 !/notebooks/minimalspace.ipynb
 !/notebooks/JuliaSat.ipynb

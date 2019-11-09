@@ -24,7 +24,7 @@ c = log(2.998e8) # m/s
 ρ_b = log(0.002e-3) # kg/J
 P_l = log(5) # W
 
-X_r = log(15) # m
+X_r = log(7.5) # m
 
 m_c = log(0.2) # kg required weight
 m_max = log(7)
@@ -42,8 +42,7 @@ M_B = log(7.96e15)
 
 λ_c = c - f
 G_r = η + 2*(log(π) + D_r - λ_c)
-
-exp_Lt_min = 5 # years lifetime
+#G_T/2 - η/2 - log(π) + λ_c = D_r
 
 exp_Ln_min = 0.1
 exp_Ln_max = 25
@@ -66,24 +65,28 @@ exp_RhR_max = 1/(exp(h_max - R) + 1)
 g_min = log(acos(exp_RhR_min)/pi) # ground station viewing fraction of orbit
 g_max = log(acos(exp_RhR_max)/pi)
 
+dBtoLinear(db) = 10^(db/10)
 
 n_T = 2 # transmitter catalog
-D_Ti = log.([0.07, 0.14])
-m_Ti = log.([0.253, 0.300])
+#D_Ti = log.([0.07, 0.14])
+#G_r = η + 2*(log(π) + D_Ti - λ_c)
+m_Ti = log.([0.053, 0.300])
 P_Ti = log.([10, 10])
-#G_Ti = log.([10, 44.7])
+G_Ti = log.([dBtoLinear(10), dBtoLinear(16.5)])
 
 n_b = 5 # battery catalog
 E_bi = log.([138600, 144000, 144000, 165600, 1607040])
 m_bi = log.([0.270, 0.310, 0.355, 0.710, 3.95])
 
-n_p = 2 # payload catalog
-D_pi = log.([0.04, 0.1])
-m_pi = log.([0.080, 2])
+n_p = 3 # payload catalog
+D_pi = log.([0.025, 0.075, 0.1])
+m_pi = log.([0.080, 1.75, 3.0])
 
 n_A = 2 # solar panel catalog
-ρ_Ai = log.([5.35, 1.05])
-η_Ai = log.([0.305, 0.268])
+
+#5.35 = 0.043/(0.098*0.082)
+ρ_Ai = log.([5.35, 0.84])
+η_Ai = log.([0.305, 0.275])
 
 
 # piecewise linear table

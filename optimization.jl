@@ -1,6 +1,7 @@
 
 using JuMP
 using PiecewiseLinearOpt
+using JSON
 
 # Define data
 include("data.jl")
@@ -8,16 +9,19 @@ include("data.jl")
 @assert issorted(h_ρi)
 @assert issorted(ρi, rev=true)
 @assert issorted(Hi)
-
 # Define global model in log-space
-function global_model(solver, n_pts::Int)
+function global_model(solver, n_pts::Int, X_R, exp_Lt_min, B=8)
+    X_R_original = X_R
+    X_R = log(X_R)
+    B = log(B)
     m = Model(solver=solver)
 
     # log variables
     @variables m begin
         # Subsystem specific parameters
         D_p # payload optical aperture diameter
-        D_T # transmitter antenna diameter
+        X_r # payload resolution
+        G_T # transmitter antenna diameter
         A # solar panel surface area
 
         # catalog
@@ -91,7 +95,7 @@ function global_model(solver, n_pts::Int)
     # Catalog selections
     @constraints m begin
         sum(x_T) == 1 # transmitter catalog
-        D_T == dot(x_T, D_Ti)
+        G_T == dot(x_T, G_Ti)
         m_T == dot(x_T, m_Ti)
         P_T == dot(x_T, P_Ti)
         #G_T == dot(x_T, G_Ti)
@@ -159,9 +163,11 @@ function global_model(solver, n_pts::Int)
         # Power and communications
         P_t - d == A + η_A + Q
         E_b >= P_t - d + T
-        EN + L + k + T_s + R + log(2π) + N + B + log(4) + 2*r <= P_T + G_r + X_r + g + T + η + 2*D_T
+        P_T <= P_t
+        EN + L + k + T_s + R + log(2π) + N + B + log(4) + 2*r <= P_T + G_r + X_r + g + T + G_T + 2*(λ_c-log(π))
         # Payload performance
-        X_r >= h + λ_v - D_p
+        X_R >= X_r
+        X_r == h + λ_v - D_p
         # Orbit
         # g == α_1 + γ_1*(h - R) # linearized
         a == pwgraph_a
@@ -199,62 +205,75 @@ function global_model(solver, n_pts::Int)
 
     # Solve
     status = solve(m)
-    println("\nglobal:")
-    println("  status: ", status)
-    println("  total mass: ", exp(getvalue(m_t)))
-    println("  payload: ", find(i -> (i > 0.5), getvalue(x_p)))
-    println("  payload res: ", exp(X_r), " >| ", exp(getvalue(h) + λ_v - getvalue(D_p)))
-    println("  battery: ", find(i -> (i > 0.5), getvalue(x_b)))
-    println("  battery energy: ", exp(getvalue(E_b)))
-    println("  battery_mass: ", exp(getvalue(m_b)))
-    println("  structural_mass: ", exp(getvalue(m_S)))
-    println("  transmitter: ", find(i -> (i > 0.5), getvalue(x_T)))
-    println("  transmitter_mass, D: ", exp(getvalue(m_T)), ",", exp(getvalue(D_T)))
-    println("  solar panel: ", find(i -> (i > 0.5), getvalue(x_A)))
-    println("  solar panel area: ", exp(getvalue(A)))
-    println("  solar_mass: ", exp(getvalue(m_A)))
-    println("  Ln = ", getvalue(exp_Ln))
-    println("  Lp = ", getvalue(exp_Lp))
-    println("  h_ρ = ", exp(getvalue(h_ρ))/1000)
-    println("  H = ", exp(getvalue(H))/1000)
-    println("  ρ = ", exp(getvalue(ρ)))
-    println("  propulsion mass: ", exp(getvalue(m_P)))
-    println("  M or P: ", getvalue(x_P2) > 0.5 ? "P" : "M")
-    println("  T_g = ", exp(getvalue(T_g)))
-    println("  m_P2 = ", exp(getvalue(m_P2)))
-    println("  m_M = ", exp(getvalue(m_M)))
-    println("  h = ", getvalue(h), " | ", exp(getvalue(h))/1000)
-    println("  a = ", getvalue(a), " | ", exp(getvalue(a))/1000-6378)
-    println("  T = ", exp(getvalue(T))/60)
-    println("  R = ", R, " | ", exp(R))
-    #println("  Ra =", getvalue(exp_Ra), " >| ", exp(R - getvalue(a)))
-    #println("  ha =", getvalue(exp_ha), " >| ", exp(getvalue(h) - getvalue(a)))
-    println("  d = ", exp(getvalue(d)))
-    println("  e = ", exp(getvalue(e)))
-    println("  g = ", exp(getvalue(g)))
-    println()
+    D = Dict(
+        "status"=> status,
+        "m_t" => exp(getvalue(m_t)),
+        "x_p" => find(i -> (i > 0.5), getvalue(x_p)),
+        "x_R" => exp(X_R),
+        "x_r" => exp(getvalue(X_r)),
+        "x_B" => find(i -> (i > 0.5), getvalue(x_b)),
+        "m_B" => exp(getvalue(m_b)),
+        "m_S" => exp(getvalue(m_S)),
+        "x_T" => find(i -> (i > 0.5), getvalue(x_T)),
+        "m_T" => exp(getvalue(m_T)),
+        "G_T" => exp(getvalue(G_T)),
+        "data" => 2*π*exp(R)/exp(getvalue(X_r))*exp(B)*exp(N),
+        "rate" => 2*π*exp(R)/exp(getvalue(X_r))*exp(B)*exp(N)/exp(getvalue(T)),
+        "x_A" => find(i -> (i > 0.5), getvalue(x_A)),
+        "A" => exp(getvalue(A)),
+        "m_A" => exp(getvalue(m_A)),
+        "Ln" => getvalue(exp_Ln),
+        "Lp" => getvalue(exp_Lp),
+        "Lt" => getvalue(exp_Ln)+getvalue(exp_Lp),
+        "h" => exp(getvalue(h))/1000,
+        "a" => exp(getvalue(a))/1000-exp(R),
+        "d" => exp(getvalue(d)),
+        "e" => exp(getvalue(e)),
+        "g" => exp(getvalue(g)),
+        "T" => exp(getvalue(T))/60,
+        "ρ" => exp(getvalue(ρ)),
+        "m_P" => exp(getvalue(m_P)),
+        "x_disj" => getvalue(x_P2) > 0.5 ? "P" : "M",
+        "T_g" => exp(getvalue(T_g)),
+        "m_P2" => exp(getvalue(m_P2)),
+        "m_M" => exp(getvalue(m_M))
+    )
+
+    # Store data
+    stringdata = json(D,4)
+    print(stringdata)
+
+    bit_value = round(exp(B))
+    filename = "resolution_$(X_R_original)_lifespan_$(exp_Lt_min)_bits_$(bit_value).json"
+    # open(filename, "w") do f
+    #         write(f, stringdata)
+    #      end
+
 end
 
 # Define solvers
 using CPLEX
 mip_solver = CplexSolver(CPX_PARAM_SCRIND=1, CPX_PARAM_EPINT=1e-9, CPX_PARAM_EPRHS=1e-9, CPX_PARAM_EPGAP=1e-7)
 
-using MINLPOA
-global_solver = MINLPOASolver(log_level=1, mip_solver=mip_solver)
+#using MINLPOA
+#global_solver = MINLPOASolver(log_level=1, mip_solver=mip_solver)
 
 # Run
-global_model(global_solver, 100)
+#global_model(global_solver, 100)
 
 # # Define solvers
-# using Ipopt
-# using Pajarito
+using Ipopt
+using Pajarito
 #
-# global_solver = PajaritoSolver(
-#     mip_solver=mip_solver,
-#     cont_solver=IpoptSolver(print_level=0),
-#     mip_solver_drives=true,
-#     log_level=1,
-#     rel_gap=1e-7)
+global_solver = PajaritoSolver(
+    mip_solver=mip_solver,
+    cont_solver=IpoptSolver(print_level=0),
+    mip_solver_drives=true,
+    log_level=1,
+    rel_gap=1e-7)
 #
 # # Run
-# global_model(global_solver, 100)
+cases = [[50, 5, 8], [10, 3, 8], [7.5, 5, 8], [5, 3, 8], [5, 3, 16]]
+for (X_R, lifetime, B) in cases
+    global_model(global_solver, 100, X_R, lifetime, B)
+end
