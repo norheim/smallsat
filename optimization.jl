@@ -164,19 +164,11 @@ function global_model(solver, n_pts::Int, X_R, exp_Lt_min, B=8)
         # Power and communications
         P_t - d == A + η_A + Q
         E_b >= P_t - d + T
-<<<<<<< HEAD
         P_T <= P_t
         EN + L + k + T_s + R + log(2π) + N + B + log(4) + 2*r <= P_T + G_r + X_r + g + T + G_T + 2*(λ_c-log(π))
         # Payload performance
         X_R >= X_r
-        X_r == h + λ_v - D_p
-=======
-        EN + L + k + T_s + R + log(2π) + N + B + log(4) + 2*r <= P_T + G_r + X_r + g + T + η + 2*D_T
-
-        # Payload performance
-        X_r >= h + λ_v - D_p
-
->>>>>>> 7e12fd908c812a6d5a962181bb9255e7a79f8cf2
+        X_r == log(1.22) + h + λ_v - D_p
         # Orbit
         # g == α_1 + γ_1*(h - R) # linearized
         a == pwgraph_a
@@ -188,8 +180,8 @@ function global_model(solver, n_pts::Int, X_R, exp_Lt_min, B=8)
         m_S == η_S + m_t
 
         # lifetime
-        pwgraph_Ln + log(3600*24*365) == H + m_t - log(2π) - C_D - A - 2*a - ρ
-        pwgraph_Lp + log(3600*24*365) == log(0.00002) + m_P + I_sp + G + a - log(0.5) - C_D - A - ρ - μ
+        pwgraph_Ln + log(3600*24*365) == T + H + m_t - log(2π) - C_D - A - 2*a - ρ
+        pwgraph_Lp + log(3600*24*365) == m_P + I_sp + G + a - log(0.5) - C_D - A - ρ - μ
         exp_Ln + exp_Lp >= exp_Lt_min
         h_ρ == h
 
@@ -216,7 +208,6 @@ function global_model(solver, n_pts::Int, X_R, exp_Lt_min, B=8)
 
     # Solve
     status = solve(m)
-<<<<<<< HEAD
     D = Dict(
         "status"=> status,
         "m_t" => exp(getvalue(m_t)),
@@ -260,48 +251,9 @@ function global_model(solver, n_pts::Int, X_R, exp_Lt_min, B=8)
     # open(filename, "w") do f
     #         write(f, stringdata)
     #      end
-
-=======
-
-    # println("  status: ", status)
-    println("some results:")
-    @printf("%25s: %12.5e\n", "total mass", exp(getvalue(m_t)))
-    @printf("%25s: %12d\n", "payload", find(i -> (i > 0.5), getvalue(x_p))[1])
-    @printf("%25s: %12d\n", "battery", find(i -> (i > 0.5), getvalue(x_b))[1])
-    @printf("%25s: %12.5e\n", "battery energy", exp(getvalue(E_b)))
-    @printf("%25s: %12.5e\n", "battery mass", exp(getvalue(m_b)))
-    @printf("%25s: %12.5e\n", "structural mass", exp(getvalue(m_S)))
-    @printf("%25s: %12d\n", "transmitter", find(i -> (i > 0.5), getvalue(x_T))[1])
-    @printf("%25s: %12.5e\n", "transmitter mass", exp(getvalue(m_T)))
-    @printf("%25s: %12d\n", "solar panel", find(i -> (i > 0.5), getvalue(x_A))[1])
-    @printf("%25s: %12.5e\n", "solar panel area", exp(getvalue(A)))
-    @printf("%25s: %12.5e\n", "solar panel mass", exp(getvalue(m_A)))
-    @printf("%25s: %12.5e\n", "propulsion mass", exp(getvalue(m_P)))
-    @printf("%25s: %12s\n", "attitude controller", (getvalue(x_P2) > 0.5 ? "reac. wheel" : "mag."))
-    @printf("%25s: %12.5e\n", "lifetime no propulsion", getvalue(exp_Ln))
-    @printf("%25s: %12.5e\n", "lifetime from propulsion", getvalue(exp_Ln))
-
-    # println("  h_ρ = ", exp(getvalue(h_ρ))/1000)
-    # println("  H = ", exp(getvalue(H))/1000)
-    # println("  ρ = ", exp(getvalue(ρ)))
-    # println("  T_g = ", exp(getvalue(T_g)))
-    # println("  m_P2 = ", exp(getvalue(m_P2)))
-    # println("  m_M = ", exp(getvalue(m_M)))
-    # println("  h = ", getvalue(h), " | ", exp(getvalue(h))/1000)
-    # println("  a = ", getvalue(a), " | ", exp(getvalue(a))/1000-6378)
-    # println("  T = ", exp(getvalue(T))/60)
-    # println("  R = ", R, " | ", exp(R))
-    #println("  Ra =", getvalue(exp_Ra), " >| ", exp(R - getvalue(a)))
-    #println("  ha =", getvalue(exp_ha), " >| ", exp(getvalue(h) - getvalue(a)))
-    # println("  d = ", exp(getvalue(d)))
-    # println("  e = ", exp(getvalue(e)))
-    # println("  g = ", exp(getvalue(g)))
-    println()
->>>>>>> 7e12fd908c812a6d5a962181bb9255e7a79f8cf2
 end
 
 
-<<<<<<< HEAD
 #using MINLPOA
 #global_solver = MINLPOASolver(log_level=1, mip_solver=mip_solver)
 
@@ -324,16 +276,20 @@ cases = [[50, 5, 8], [10, 3, 8], [7.5, 5, 8], [5, 3, 8], [5, 3, 16]]
 for (X_R, lifetime, B) in cases
     global_model(global_solver, 100, X_R, lifetime, B)
 end
-=======
+
+## =======================
+# Chris old code
+## =======================
+
 # MILP solver
 # using CPLEX
 # mip_solver = CplexSolver(CPX_PARAM_SCRIND=1, CPX_PARAM_EPINT=1e-9, CPX_PARAM_EPRHS=1e-9, CPX_PARAM_EPGAP=1e-7)
-using Gurobi
-mip_solver = Gurobi.GurobiSolver(OutputFlag=1, IntFeasTol=1e-9, FeasibilityTol=1e-9, MIPGap=1e-7)
+#using Gurobi
+#mip_solver = Gurobi.GurobiSolver(OutputFlag=1, IntFeasTol=1e-9, FeasibilityTol=1e-9, MIPGap=1e-7)
 
 # MINLP solver
-using DaChoppa
-global_solver = DaChoppaSolver(log_level=1, mip_solver=mip_solver)
+#using DaChoppa
+#global_solver = DaChoppaSolver(log_level=1, mip_solver=mip_solver)
 
 # using Ipopt
 # using Pavito
@@ -346,5 +302,4 @@ global_solver = DaChoppaSolver(log_level=1, mip_solver=mip_solver)
 #     )
 
 # Run
-global_model(global_solver, 100)
->>>>>>> 7e12fd908c812a6d5a962181bb9255e7a79f8cf2
+#global_model(global_solver, 100)
