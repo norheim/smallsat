@@ -111,7 +111,6 @@ m = Model(solver=global_solver)
     x_A[1:n_A], Bin
 
     # Operations
-    k_exp
     x_v[1:Nt, 1:n_gs], Bin
     x_vc[1:Nt, 1:n_gs], Bin
     x_s[1:Nt], Bin
@@ -171,24 +170,23 @@ pwgraph_Lp = piecewiselinear(m, exp_Lp, linspace(exp_Lp_min, exp_Lp_max, n_pts),
 # Operations
 θ = linspace(0, 2π, Nt)*orbits # one full satellite orbit
 
-inc = -0.97
+inc = 0.97
+khelper = 2π/*(T2*sqrt(exp(μ)))
 sun_cd = sqrt.(sin.(θ).^2+sin(inc)^2*cos.(θ).^2)
 sun_cd2 = Int.(cos.(θ) .>= 0)
 
-gs_cd = [piecewiselinear(m, k_exp, pwgraph_a, brk(k_min,k_max,n_pts), 
+gs_cd = [piecewiselinear(m, pwgraph_a, 
         brk_log(a_min, a_max, n_pts),
-        (kexp, a) -> exp(a)/exp(R)*(-sin(inc)*sin(lat_g[j])*cos(θ[i])
-        +sin(θ[i])*sin(lon_g[j]+θ[i]/exp(kexp))*cos(lat_g[j])
-        +cos(inc)*cos(lat_g[j])*cos(θ[i])*cos(lon_g[j]+θ[i]/exp(kexp))))-1
+        (a) -> exp(a)/exp(R)*(sin(inc)*sin(lat_g[j])*cos(θ[i])
+        +sin(θ[i])*sin(lon_g[j]+θ[i]*khelper*exp(a)^1.5)*cos(lat_g[j])
+        +cos(inc)*cos(lat_g[j])*cos(θ[i])*cos(lon_g[j]+θ[i]*khelper*exp(a)^1.5)))-1
     for i=1:Nt for j=1:n_gs]
 
-
-@constraint(m, k_exp + T == log(T2))
 @constraint(m, [i=1:Nt,j=1:n_gs],  gs_cd[i,j] <= 4*x_v[i,j])
 @constraint(m, [i=1:Nt,j=1:n_gs],  gs_cd[i,j] >= -4*(1-x_v[i,j]))
 @constraint(m, [i=1:Nt], a_exp/exp(R)*(sun_cd[i]+sun_cd2[i]) - 1 <= 4*x_s[i] )
 @constraint(m, [i=1:Nt], a_exp/exp(R)*(sun_cd[i]+sun_cd2[i]) - 1 >= -4*(1-x_s[i]))
-@constraint(m, [i=1:Nt, j=1:n_gs], x_v[i,j] <= x_i[j]) # which ground stations we select
+@constraint(m, [i=1:Nt, j=1:n_gs], x_vc[i,j] <= x_i[j]) # which ground stations we select
 @constraint(m, sum(x_i) <= max_n_gs)
 @constraint(m, x_sc .<= x_s)
 @constraint(m, x_vc .<= x_v)
