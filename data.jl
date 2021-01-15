@@ -5,7 +5,7 @@ R = log(6378e3) # m
 Q = log(1367) # W/m^2
 EN = log(14)
 D_r = log(5.3) # m
-L = log(9.772372209558107) # example from SMAD in DB: 8.5+1+0.1+0.3 
+L = log(9.772372209558107) # example from SMAD in DB: 8.5+1+0.1+0.3
 k = log(1.38064852e-23) # J/K Boltzman constant R/Na
 T_s = log(135) # K
 B = log(8) # bit
@@ -14,10 +14,10 @@ N = log(2e3) # pixel width
 λ_v = log(500e-9) # m
 f = log(2.2e9) # Hz
 c = log(2.998e8) # m/s
-η_A = log(0.29)
-ρ_A = log(10) # kg/m^2
-ρ_p = log(100) # kg/m^1.5
-ρ_T = log(2) # kg/m^1.5
+#η_A = log(0.29)
+#ρ_A = log(10) # kg/m^2
+#ρ_p = log(100) # kg/m^1.5
+#ρ_T = log(2) # kg/m^1.5
 ρ_P = log(500e3) # kg*m
 ρ_b = log(0.002e-3) # kg/J
 P_l = log(5) # W
@@ -82,7 +82,7 @@ m_Ti = log.([0.053, 0.300])
 #m_Ti = log.(rand(Uniform(0.01,1),n_T))
 P_Ti = log.([10, 10])
 #P_Ti = log.(rand(Uniform(5,15),n_T))
-G_Ti = log.([dBtoLinear(10), dBtoLinear(16.5)])
+G_Ti = log.([dBtoLinear(11), dBtoLinear(16.5)])
 #G_Ti = log.([dBtoLinear(x) for x in rand(Uniform(10,20),n_T)])
 
 n_b = 5 # battery catalog
@@ -97,7 +97,7 @@ n_p = 3 # payload catalog
 D_pi = log.([0.025, 0.075, 0.1]) #0.025
 #D_pi = log.(rand(Uniform(0.01, 0.075),n_p))
 m_pi = log.([0.080, 1.75, 3.0]) #0.080
-P_pi = log.([3, 5, 8])
+P_pi = log.([0.5, 1, 2])
 #m_pi = log.(rand(Uniform(0.1, 5),n_p))
 
 n_A = 2 # solar panel catalog
@@ -116,11 +116,15 @@ Hi = log(1e3) .+ log.([5.9, 25.5, 37.5, 44.8, 50.3, 54.8, 58.2, 61.3, 64.5, 68.7
 ;
 
 # operations simulation
-orbits = 1
-Nt = 10
+orbits = 5
+Nperorbit = 20
+Nt = Nperorbit*orbits
 
 # Ground stations
-n_gs = 1    # stations available
+n_gs = 6    # points on the map
+n_GS = 5
 max_n_gs = 1 # amount of stations we can pick
 srand(100)
-lat_g, lon_g =  (0.5-rand(n_gs))*π/2, rand(n_gs)*2π
+lat_g0, lon_g0 =  (0.5-rand(1))*π/2, rand(1)*2π
+lat_g = vcat(lat_g0, (0.5-rand(n_gs-1))*π/2)
+lon_g = vcat(lon_g0, rand(n_gs-1)*2π)

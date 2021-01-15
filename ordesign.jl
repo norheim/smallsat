@@ -1,6 +1,8 @@
 # include("C:\\Users\\johan\\PycharmProjects\\smallsat\\ordesign.jl")
-using JuMP, PiecewiseLinearOpt, Ipopt, Gurobi, Pavito
-mip_solver = Gurobi.GurobiSolver(OutputFlag=1, IntFeasTol=1e-9, 
+using JuMP, PiecewiseLinearOpt, Ipopt, Gurobi, Pavito, JSON
+
+# Setup optimizer
+mip_solver = Gurobi.GurobiSolver(OutputFlag=1, IntFeasTol=1e-9,
     FeasibilityTol=1e-9, MIPGap=1e-7)
 
 global_solver = PavitoSolver(
@@ -11,6 +13,8 @@ global_solver = PavitoSolver(
     rel_gap=1e-7,
     )
 
+m = Model(solver=global_solver)
+
 # Define data
 include("data.jl")
 
@@ -19,12 +23,10 @@ B = 32
 n_pts = 10
 exp_Lt_min = 3
 
-X_R_original = X_R
 X_R = log(X_R)
 B = log(B)
-m = Model(solver=global_solver)
 
-# log variables
+# most variables are in log space
 @variables m begin
     # Subsystem specific parameters
     D_p # payload optical aperture diameter
@@ -49,11 +51,12 @@ m = Model(solver=global_solver)
     # Comms related parameters
     dRate
     data
-    fr_comms
+    #fr_comms
+    maxData >= 0, Int
     fr_charge
-    expfrcm
+    #expfrcm
+    expmxdata
     expfrch
-    
 
     # Power related parameters
     P_p # payload power
@@ -110,13 +113,16 @@ m = Model(solver=global_solver)
     x_p[1:n_p], Bin
     x_A[1:n_A], Bin
 
-    # Operations
+    # Operation related variables
+    gs_cd[1:Nt, 1:n_gs]
     x_v[1:Nt, 1:n_gs], Bin
-    x_vc[1:Nt, 1:n_gs], Bin
+    x_vc[1:Nt], Bin
     x_s[1:Nt], Bin
     x_sc[1:Nt], Bin
-    x_i[1:Nt], Bin
+    #x_i[1:Nt], Bin
+    y_p[1:Nt], Bin
     x_pc[1:Nt], Bin
+    d_t[1:Nt]>=0
 end
 
 # Catalog selections
@@ -127,8 +133,7 @@ end
     G_T == dot(x_T, G_Ti)
     m_T == dot(x_T, m_Ti)
     P_T == dot(x_T, P_Ti)
-    #G_T == dot(x_T, G_Ti)
-    #m_T == ρ_T + 3/2*D_T
+    #m_T == ρ_T + 3/2*D_T # old mass model
 
     sum(x_b) == 1 # battery catalog
     E_b == dot(x_b, E_bi)
@@ -160,7 +165,7 @@ fhR = h_val -> log(acos(1/(exp(h_val - R) + 1))) # instead of linearized
 pwgraph_fhR = piecewiselinear(m, h, brk_log(h_min, h_max, n_pts), fhR) # concave
 ahr = h_val -> log(exp(h_val) + exp(R))
 pwgraph_a = piecewiselinear(m, h, brk_log(h_min, h_max, n_pts), ahr) #convex
-a_exp = piecewiselinear(m, h, brk_log(h_min, h_max, n_pts), 
+a_exp = piecewiselinear(m, h, brk_log(h_min, h_max, n_pts),
     (h_val)-> exp(h_val) + exp(R))
 
 # Lifetime
@@ -170,40 +175,57 @@ pwgraph_Lp = piecewiselinear(m, exp_Lp, linspace(exp_Lp_min, exp_Lp_max, n_pts),
 # Operations
 θ = linspace(0, 2π, Nt)*orbits # one full satellite orbit
 
-inc = 0.97
+inc = 0.97 # Orbit inclination
 khelper = 2π/*(T2*sqrt(exp(μ)))
 sun_cd = sqrt.(sin.(θ).^2+sin(inc)^2*cos.(θ).^2)
 sun_cd2 = Int.(cos.(θ) .>= 0)
 
-gs_cd = [piecewiselinear(m, pwgraph_a, 
+for i=1:Nt
+    for j=1:n_gs
+        gs_cd[i,j] = piecewiselinear(m, pwgraph_a,
         brk_log(a_min, a_max, n_pts),
         (a) -> exp(a)/exp(R)*(sin(inc)*sin(lat_g[j])*cos(θ[i])
         +sin(θ[i])*sin(lon_g[j]+θ[i]*khelper*exp(a)^1.5)*cos(lat_g[j])
-        +cos(inc)*cos(lat_g[j])*cos(θ[i])*cos(lon_g[j]+θ[i]*khelper*exp(a)^1.5)))-1
-    for i=1:Nt for j=1:n_gs]
+        +cos(inc)*cos(lat_g[j])*cos(θ[i])*cos(lon_g[j]+θ[i]*khelper*exp(a)^1.5))-1)
+    end
+end
 
 @constraint(m, [i=1:Nt,j=1:n_gs],  gs_cd[i,j] <= 4*x_v[i,j])
 @constraint(m, [i=1:Nt,j=1:n_gs],  gs_cd[i,j] >= -4*(1-x_v[i,j]))
 @constraint(m, [i=1:Nt], a_exp/exp(R)*(sun_cd[i]+sun_cd2[i]) - 1 <= 4*x_s[i] )
 @constraint(m, [i=1:Nt], a_exp/exp(R)*(sun_cd[i]+sun_cd2[i]) - 1 >= -4*(1-x_s[i]))
-@constraint(m, [i=1:Nt, j=1:n_gs], x_vc[i,j] <= x_i[j]) # which ground stations we select
-@constraint(m, sum(x_i) <= max_n_gs)
+#@constraint(m, [i=1:Nt, j=1:n_gs], x_vc[i,j] <= x_i[j]) # which ground stations we select
+#@constraint(m, sum(x_i) <= max_n_gs)
 @constraint(m, x_sc .<= x_s)
-@constraint(m, x_vc .<= x_v)
-@constraint(m, [i=1:Nt], x_sc[i]+sum(x_vc[i,:]) <= 1) # cannot do sun and comms
-@constraint(m, [i=1:Nt], sum(x_vc[i,:])+x_pc[i] <= 1) # cannot do payload and comms
+@constraint(m, [i=1:Nt], x_vc[i] <= sum(x_v[i,1:n_GS])) # if at least one then we can do comms
+@constraint(m, [i=1:Nt, j=1+n_GS:n_gs], x_v[i,j] <= y_p[i])
+@constraint(m, x_pc .<= y_p)
+@constraint(m, [i=1:Nt], x_sc[i]+x_vc[i] <= 1) # cannot do sun and comms
+@constraint(m, [i=1:Nt], x_pc[i]+x_vc[i] <= 1) # cannot do payload and comms
 
-expfrcm = piecewiselinear(m, fr_comms, linspace(0.9*1/Nt, 0.9, n_pts), 
-    (fr_comms)-> log(fr_comms))
-expfrch = piecewiselinear(m, fr_charge, linspace(0.9*1/Nt, 0.9, n_pts), 
+# Communications and data accumulation
+max_orbit_nocom = 1
+bigM = max_orbit_nocom*Nperorbit
+# if we communicate (x_vc=1), we can only communicate maxData
+@constraint(m, [i=1:Nt-1], d_t[i]-d_t[i+1] >= -(bigM+1)*(1-x_vc[i+1]))
+@constraint(m, [i=1:Nt-1], d_t[i]-d_t[i+1] <= maxData+(bigM+1)*(1-x_vc[i+1]))
+# otherwise (x_vc=0), we accumulate one more time step worth of data
+@constraint(m, d_t[1]==0) # we start at zero
+@constraint(m, [i=1:Nt-1], d_t[i+1]-d_t[i] >= 1 - bigM*x_vc[i+1])
+@constraint(m, [i=1:Nt-1], d_t[i+1]-d_t[i] <= 1 + bigM*x_vc[i+1])
+@constraint(m, [i=2:Nt], d_t[i] <= Nperorbit) # we cannot accumulate more than one orbits worth of data
+
+expmxdata = piecewiselinear(m, maxData, linspace(1, Nperorbit, Nperorbit),
+    (maxData)-> log(maxData))
+expfrch = piecewiselinear(m, fr_charge, linspace(0.9*1/Nt, 0.9, n_pts),
     (fr_charge)-> log(fr_charge))
 
-r = piecewiselinear(m, h, brk_log(h_min, h_max, n_pts), 
+r = piecewiselinear(m, h, brk_log(h_min, h_max, n_pts),
         (h) -> log(sqrt(exp(h)^2+2*exp(R)*exp(h))))
 
 @constraints m begin
-    Nt*fr_comms == sum(x_vc)
-    dRate == data - expfrcm - T
+    #Nt*fr_comms == sum(x_vc)
+    dRate == expmxdata + data - T
 
     Nt*fr_charge == sum(x_sc)
     #fr_charge >= 0.5
@@ -227,13 +249,13 @@ end
     exp(m_M - m_t) <= exp_mMPt
     #(x_P2 + 1e-3)*exp((m_P2 - m_t)/(x_P2 + 1e-3)) <= exp_mMPt
     #(x_M + 1e-3)*exp((m_M - m_t)/(x_M + 1e-3)) <= exp_mMPt
-    
+
     #exp(fr_comms) <= expfrcm
     #exp(fr_charge) <= expfrch
     #exp(fr_payload) <= expfrp
     #exp(P_T - P_t + expfrcm - expfrch) <= expPc
     #exp(P_T - P_p + expfrcm - expfrp) <= expPp
-    
+
     exp(P_T - P_t) <= exp_PTt
     exp(P_l - P_t) <= exp_Plt
 
